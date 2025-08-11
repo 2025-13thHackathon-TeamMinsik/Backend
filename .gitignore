@@ -1,0 +1,31 @@
+# 가상환경
+.venv/
+venv/
+*venv/
+env/
+
+# 파이썬 캐시
+__pycache__/
+*.py[cod]
+*.so
+
+# Django DB 파일
+db.sqlite3
+
+# VSCode 설정 (쓸 경우)
+.vscode/
+
+# PyCharm 설정
+.idea/
+
+# macOS 시스템 파일
+.DS_Store
+
+# 로그 파일
+*.log
+
+# 환경 변수 파일 (예: 비밀번호 들어있는 .env)
+.env
+
+#media 폴더(예: 프로필 사진)
+media/
