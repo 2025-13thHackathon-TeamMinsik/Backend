@@ -5,6 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Profile
 from .serializers import SignupSerializer, LoginSerializer
+from rest_framework import generics
 
 # Create your views here.
 
