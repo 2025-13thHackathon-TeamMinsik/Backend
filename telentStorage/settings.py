@@ -15,7 +15,7 @@ from decouple import config
 import os
 
 # OPENROUTER API KEY
-OPENROUTER_API_KEY = config("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY = config("OPENROUTER_API_KEY", default="test")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -149,4 +149,14 @@ MEDIA_URL = '/media/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+AUTH_USER_MODEL = 'accounts.User'
+
+
 
