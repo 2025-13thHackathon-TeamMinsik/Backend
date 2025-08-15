@@ -15,7 +15,7 @@ from decouple import config
 import os
 
 # OPENROUTER API KEY
-OPENROUTER_API_KEY = config("OPENROUTER_API_KEY")
+OPENROUTER_API_KEY = config("OPENROUTER_API_KEY", default="test")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
