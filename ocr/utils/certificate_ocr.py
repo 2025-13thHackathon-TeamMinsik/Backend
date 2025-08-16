@@ -1,24 +1,22 @@
+import re
 import pytesseract
 from PIL import Image
 
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
 def extract_business_info(image_path):
+    print('이미지 경로' + image_path)
     text = pytesseract.image_to_string(Image.open(image_path), lang='kor+eng')
 
-    company_name = None
-    business_number = None
-    store_name = None
-    business_type = None
+    company_name = re.search(r"기업명[:\s]*([^\n]+)", text)
+    business_number = re.search(r"사업자등록번호[:\s]*([\d\-]+)", text)
+    store_name = re.search(r"대표자명[:\s]*([^\n]+)", text)
+    business_type = re.search(r"업종[:\s]*([^\n]+)", text)
 
-    for line in text.split("\n"):
-        line = line.strip()
-        if "기업명" in line:
-            company_name = line.split()[-1]
-        elif "사업자등록번호" in line:
-            business_number = line.split()[-1]
-        elif "대표자명" in line:
-            store_name = line.split()[-1]
-        elif "업종" in line:
-            business_type = line.split()[-1]
-
-    return company_name, business_number, store_name, business_type
+    return (
+        company_name.group(1).strip() if company_name else None,
+        business_number.group(1).strip() if business_number else None,
+        store_name.group(1).strip() if store_name else None,
+        business_type.group(1).strip() if business_type else None
+    )
         

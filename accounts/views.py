@@ -6,8 +6,10 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Profile
-from .serializers import UserSerializer, SignupSerializer, LoginSerializer
+from .serializers import UserSerializer, SignupSerializer, LoginSerializer, BusinessCertUploadSerializer
 from ocr.utils.certificate_ocr import extract_business_info
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 # Create your views here.
 
@@ -38,26 +40,36 @@ class LoginView(GenericAPIView):
         
         # 토큰 발급
         refresh = RefreshToken.for_user(user)
+
+        refresh['role'] = user.profile.role
+        refresh['user_id'] = user.id
+        refresh['email'] = user.email
+
+        access = refresh.access_token
+        access['role'] = user.profile.role
+        access['user_id'] = user.id
+        access['email'] = user.email
+
         return Response({
             'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            'access': str(access),
         })
 
 # 소상공인 확인서 ocr 
 class BusinessCertUploadView(APIView):
     def post(self, request):
-        user = request.user
-        user.business_cert = request.FILES['business_cert']
-        user.save()
+        serializer = BusinessCertUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        business_cert = serializer.validated_data["business_cert"]
 
-        # ocr에서 가져옴
-        company_name, business_number, store_name, business_type = extract_business_info(user.business_cert.path)
+        # 파일을 임시로 저장
+        path = default_storage.save(f"temp/{business_cert.name}", ContentFile(business_cert.read()))
 
-        user.store_name = store_name
-        user.business_number = business_number
-        user.company_name = company_name
-        user.business_type = business_type
-        user.save()
+        # OCR 정보 추출
+        company_name, business_number, store_name, business_type = extract_business_info(default_storage.path(path))
+        
+        # 임시 파일 삭제 (선택)
+        default_storage.delete(path)
 
         return Response({
             "대표자명": store_name,
