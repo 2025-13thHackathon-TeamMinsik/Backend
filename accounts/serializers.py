@@ -17,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
     academic_status = serializers.CharField(source='profile.academic_status', read_only=True)
 
     # 소상공인 전용
-    store_name = serializers.CharField(source='profile.store_name', read_only=True)
+    ceo_name = serializers.CharField(source='profile.ceo_name', read_only=True)
     business_number = serializers.CharField(source='profile.business_number', read_only=True)
     company_name = serializers.CharField(source='profile.company_name', read_only=True)
     business_type = serializers.CharField(source='profile.business_type', read_only=True)
@@ -26,10 +26,10 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'email', "full_name", 'birth', 'phone',
+            'id', 'email', "full_name", 'birth', 'phone',
             'role', 'skill_1', 'skill_2', 'location',
             'university', 'major', 'double_major', 'academic_status',
-            'store_name', 'business_number', 'company_name', 'business_type', 'business_cert',
+            'ceo_name', 'business_number', 'company_name', 'business_type', 'business_cert',
         ]
 
 class SignupSerializer(serializers.ModelSerializer):
@@ -48,7 +48,7 @@ class SignupSerializer(serializers.ModelSerializer):
     academic_status = serializers.CharField(required=False, allow_blank=True)
     
     # 소상공인 필드
-    store_name = serializers.CharField(required=False, allow_blank=True)
+    ceo_name = serializers.CharField(required=False, allow_blank=True)
     business_number = serializers.CharField(required=False, allow_blank=True)
     company_name = serializers.CharField(required=False, allow_blank=True)
     business_type = serializers.CharField(required=False, allow_blank=True)
@@ -60,7 +60,7 @@ class SignupSerializer(serializers.ModelSerializer):
             'email', 'password', "full_name",'birth', 'phone', 'role', 'location',
             'skill_1', 'skill_2',  'full_name', 
             'university', 'major', 'double_major', 'academic_status',
-            'store_name', 'business_number', 'company_name', 'business_type', 'business_cert',
+            'ceo_name', 'business_number', 'company_name', 'business_type', 'business_cert',
         ]
         extra_kwargs = {
             'password' : {'write_only':True}
@@ -97,7 +97,7 @@ class SignupSerializer(serializers.ModelSerializer):
             'major': validated_data.pop('major', None),
             'double_major': validated_data.pop('double_major', None),
             'academic_status': validated_data.pop('academic_status', None),
-            'store_name': validated_data.pop('store_name', None),
+            'ceo_name': validated_data.pop('ceo_name', None),
             'business_number': validated_data.pop('business_number', None),
             'company_name': validated_data.pop('company_name', None),
             'business_type': validated_data.pop('business_type', None),
@@ -126,3 +126,14 @@ class LoginSerializer(serializers.Serializer):
 
 class BusinessCertUploadSerializer(serializers.Serializer):
     business_cert = serializers.ImageField()
+    ceo_name = serializers.CharField(required=False, allow_blank=True)
+    business_number = serializers.CharField(required=False, allow_blank=True)
+    company_name = serializers.CharField(required=False, allow_blank=True)
+    business_type = serializers.CharField(required=False, allow_blank=True)
+    business_cert = serializers.FileField(required=False)
+
+    class Meta:
+        model: Profile
+        fields = [
+            'ceo_name', 'business_number', 'company_name', 'business_type', 'business_cert',
+        ]

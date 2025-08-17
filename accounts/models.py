@@ -77,7 +77,7 @@ class Profile(models.Model):
 	academic_status = models.CharField(max_length=20, blank=True, null=True) # 학년
 	 
 	#소상공인 전용
-	store_name = models.CharField(max_length=100, blank=True, null=True) # 대표자명
+	ceo_name = models.CharField(max_length=100, blank=True, null=True) # 대표자명
 	business_number = models.CharField(max_length=30, blank=True, null=True) # 사업자번호
 	company_name = models.CharField( max_length=200, blank=True, null=True) # 업체명
 	business_type = models.CharField(max_length=100, blank=True, null=True) # 업종

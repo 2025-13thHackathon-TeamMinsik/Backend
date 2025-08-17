@@ -22,6 +22,7 @@ class SignupView(CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()  # User 객체 반환됨
+        output_serializer = UserSerializer(user)
 
         # 전체 User + Profile 반환
         output_serializer = UserSerializer(user)
@@ -55,7 +56,7 @@ class LoginView(GenericAPIView):
             'access': str(access),
         })
 
-# 소상공인 확인서 ocr 
+# 소상공인 확인서 업로드
 class BusinessCertUploadView(APIView):
     def post(self, request):
         serializer = BusinessCertUploadSerializer(data=request.data)
@@ -66,13 +67,13 @@ class BusinessCertUploadView(APIView):
         path = default_storage.save(f"temp/{business_cert.name}", ContentFile(business_cert.read()))
 
         # OCR 정보 추출
-        company_name, business_number, store_name, business_type = extract_business_info(default_storage.path(path))
+        company_name, business_number, ceo_name, business_type = extract_business_info(default_storage.path(path))
         
         # 임시 파일 삭제 (선택)
         default_storage.delete(path)
 
         return Response({
-            "대표자명": store_name,
+            "대표자명": ceo_name,
             "사업자등록번호": business_number,
             "업체이름": company_name,
             "업종": business_type
