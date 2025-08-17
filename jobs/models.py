@@ -6,13 +6,11 @@ class JobPost(models.Model):
         ('LOCAL_CURRENCY', '지역화폐'),
         ('VOLUNTEER_TIME', '봉사시간'),
     ]
-
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='job_posts'
     )
-
     duration_time = models.CharField(
         max_length=100,
         help_text='예: "월/수 4시간, 1달" - 사용자가 한 칸에 입력'
@@ -28,26 +26,21 @@ class JobPost(models.Model):
         help_text='봉사시간 또는 지역화폐 선택'
     )
     description = models.TextField(max_length=300)  # 공백 포함 300자
-
     image_from_gallery = models.ImageField(
         upload_to='job_images/gallery/', blank=True, null=True
     )
     image_from_ai = models.ImageField(
         upload_to='job_images/ai/', blank=True, null=True
     )
-
     store_lat = models.FloatField()  # GPS 기반으로 자동 입력
     store_lng = models.FloatField()  # GPS 기반으로 자동 입력
-
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     liked_users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name='liked_posts',
         blank=True
     )
-
     @property
     def like_count(self):
         return self.liked_users.count()
