@@ -8,6 +8,8 @@ env/
 __pycache__/
 *.py[cod]
 *.so
+*.pyc
+__pycache__/
 
 # Django DB 파일
 db.sqlite3
