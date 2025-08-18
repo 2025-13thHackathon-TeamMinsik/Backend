@@ -49,9 +49,9 @@ def extract_business_info(image_path):
     business_type_match = re.search(r"업종[:\s]*([^\n]+)", text)
     business_type = business_type_match.group(1).strip() if business_type_match else None
 
-    print('company_name:' + company_name)
-    print('business_number:' + business_number)
-    print('ceo_name:' + ceo_name)
+    print('company_name:' , company_name)
+    print('business_number:' , business_number)
+    print('ceo_name:' , ceo_name)
     # print('business_type:' + business_type)    
 
     return company_name, business_number, ceo_name, business_type

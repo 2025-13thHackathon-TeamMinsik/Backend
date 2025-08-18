@@ -25,7 +25,7 @@ urlpatterns = [
     path('jobs/', include('jobs.urls', namespace='jobs')),  
     path("wallets/", include("wallet.urls")),
     path("portfolio/", include("portfolio.urls")),
-    # path("review/", include("reviews.urls")),
+    path("reviews/", include("reviews.urls")),
 ]
 
 if settings.DEBUG:
