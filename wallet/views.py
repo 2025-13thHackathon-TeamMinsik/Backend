@@ -71,7 +71,7 @@ class ReceiptView(APIView):
         CoinHistory.objects.create(user=request.user, amount=earned, description="영수증 적립")
 
         return Response({
-            "store_name": store_name,
+            "company_name": store_name,
             "amount": amount,
             "region": region,
             "earned": earned,
