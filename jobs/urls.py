@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     JobPostListView, JobPostDetailView,
     JobPostCreateView, JobPostUpdateView,JobPostLikeToggleView,
-    JobPostDeleteView, JobPostHistoryView,JobPostHashtagSearchView
+    JobPostDeleteView, JobPostHistoryView,JobPostSearchListView
 )
 
 app_name = 'jobs'
@@ -26,7 +26,7 @@ urlpatterns = [
     # 공고 이력 조회
     path('posts/history/', JobPostHistoryView.as_view(), name='post-history'),
     # 공고 내역 검색
-    path('search/', JobPostHashtagSearchView.as_view(), name='jobpost-search'),
+    path('search/', JobPostSearchListView.as_view(), name='jobpost-search'),
     # 공고 좋아요 
     path('<int:pk>/like/', JobPostLikeToggleView.as_view(), name='jobpost-like'),
 ]

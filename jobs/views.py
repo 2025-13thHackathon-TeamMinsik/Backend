@@ -2,17 +2,17 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework import status
 from .models import JobPost
-from .serializers import JobPostSerializer
+from .serializers import JobPostSerializer,JobPostListSerializer
 from django.db.models import Q
 from rest_framework.views import APIView
 from django.db.models import Count
 from geopy.distance import geodesic
 
 class JobPostListView(generics.ListAPIView):
-    serializer_class = JobPostSerializer
+    serializer_class = JobPostListSerializer
 
     def get_queryset(self):
-        queryset = JobPost.objects.all()
+        queryset = JobPost.objects.select_related('owner__profile').all()
         request = self.request
 
         # 결제 방식 필터링
@@ -122,22 +122,6 @@ class JobPostHistoryView(generics.ListAPIView):
     def get_queryset(self):
         return JobPost.objects.filter(owner=self.request.user).order_by('-created_at')
 
-#공고 이력 조회
-class JobPostHashtagSearchView(generics.ListAPIView):
-    serializer_class = JobPostSerializer
-    permission_classes = [permissions.AllowAny] 
-
-    def get_queryset(self):
-        queryset = JobPost.objects.all().order_by('-created_at')
-        keyword = self.request.query_params.get('q', '').strip()  # ?q=#개발
-
-        if keyword.startswith('#'):
-            # # 제거하고 검색
-            clean_keyword = keyword[1:]
-            queryset = queryset.filter(description__icontains=f'#{clean_keyword}')
-
-        return queryset
-
  #공고 좋아요   
 class JobPostLikeToggleView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -153,3 +137,59 @@ class JobPostLikeToggleView(APIView):
             liked = True
 
         return Response({'liked': liked})
+
+#검색용
+class JobPostSearchListView(generics.ListAPIView):
+    serializer_class = JobPostListSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        queryset = JobPost.objects.select_related('owner__profile').all()
+        request = self.request
+
+        # 검색 키워드
+        keyword = request.query_params.get('q', '').strip()
+        if keyword:
+            if keyword.startswith('#'):
+                keyword = keyword[1:] 
+            queryset = queryset.filter(description__icontains=keyword)
+
+        # 결제 방식 필터링
+        payment_type = request.query_params.get('payment_type')
+        if payment_type and payment_type != 'ALL':
+            queryset = queryset.filter(payment_type=payment_type)
+
+        # 정렬 옵션
+        sort_by = request.query_params.get('sort', 'latest')  # latest, popular, liked, distance
+        lat = request.query_params.get('lat')
+        lng = request.query_params.get('lng')
+
+        if sort_by == 'latest':
+            queryset = queryset.order_by('-created_at')
+
+        elif sort_by == 'popular':
+            queryset = queryset.annotate(applicant_count=Count('applications')).order_by('-applicant_count', '-created_at')
+
+        elif sort_by == 'liked':
+            if request.user.is_authenticated:
+                queryset = queryset.filter(liked_users=request.user)
+            else:
+                queryset = queryset.none()
+
+        elif sort_by == 'distance' and lat and lng:
+            try:
+                lat = float(lat)
+                lng = float(lng)
+                queryset = sorted(
+                    queryset,
+                    key=lambda post: geodesic((lat, lng), (post.store_lat, post.store_lng)).km
+                )
+            except ValueError:
+                pass  # 위도/경도 오류 시 정렬 건너뜀
+
+        return queryset
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context

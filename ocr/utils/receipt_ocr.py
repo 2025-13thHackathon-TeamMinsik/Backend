@@ -6,6 +6,10 @@ import re
 from wallet.models import Wallet, CoinHistory
 from accounts.models import Profile, User
 
+# 소상공인 프로필에서 리스트 가져오기
+db_stores = list(Profile.objects.filter(role='owner').values('company_name', 'location'))
+
+
 # OCR 전처리
 def preprocess_receipt(image_path):
     data = np.fromfile(image_path, dtype=np.uint8)
@@ -64,13 +68,19 @@ def parse_receipt(text):
 # DB 검증 후 코인 적립 가능 여부
 def check_and_award(store_name, region, db_store_list):
     """
-    db_store_list 예시: [{'name': 'ABC 베이커리', 'region': '서울 강남구'}]
+    db_store_list: [{'company_name': 'ABC 베이커리', 'location': '서울 강남구'}]
     """
     if not store_name or not region:
         return False
 
+    store_name_normalized = store_name.replace(" ", "").lower()
+    region_normalized = region.replace(" ", "").lower()
+
     for store in db_store_list:
-        if store_name.replace(" ", "").lower() == store['name'].replace(" ", "").lower() \
-           and region.replace(" ", "").lower() == store['region'].replace(" ", "").lower():
-            return True 
+        company_name_db = store.get('company_name', '').replace(" ", "").lower()
+        location_db = store.get('location', '').replace(" ", "").lower()
+
+        if store_name_normalized == company_name_db and region_normalized == location_db:
+            return True
+
     return False

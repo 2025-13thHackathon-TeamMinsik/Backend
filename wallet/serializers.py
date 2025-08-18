@@ -3,10 +3,9 @@ from .models import Wallet, CoinHistory, RedeemCode, Receipt
 
 
 class WalletSerializer(serializers.ModelSerializer):
-    progress = serializers.SerializerMethodField()
     class Meta:
         model = Wallet
-        fields = ["coin_balance", "stamp_count", "progress",'last_ten_coins']
+        fields = ["coin_balance"]
     def get_progress(self, obj):
         return f"{obj.stamp_count}/10"
 
