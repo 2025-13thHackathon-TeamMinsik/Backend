@@ -6,7 +6,7 @@ class WalletSerializer(serializers.ModelSerializer):
     progress = serializers.SerializerMethodField()
     class Meta:
         model = Wallet
-        fields = ["coin_balance", "stamp_count", "progress"]
+        fields = ["coin_balance", "stamp_count", "progress",'last_ten_coins']
     def get_progress(self, obj):
         return f"{obj.stamp_count}/10"
 
