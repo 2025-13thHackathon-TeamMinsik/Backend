@@ -23,7 +23,7 @@ class Wallet(models.Model): #지갑
     last_ten_coins = models.JSONField(default=list)        # 최근 10번 코인 적립 기록
 
     def __str__(self):
-        return f"{self.user.username} wallet"
+        return f"{self.user.full_name} wallet"
 
 
 class Receipt(models.Model): #영수증기록

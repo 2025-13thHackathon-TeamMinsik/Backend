@@ -62,6 +62,11 @@ class Profile(models.Model):
         ('volunteer', '자원봉사'),
     )
 
+	GENDER_CHOICES = (
+		('male', '남성'),
+		('female', '여성')
+	)
+
 	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
 	role = models.CharField(max_length=20, choices=ROLE_CHOICES)
 	
@@ -69,11 +74,11 @@ class Profile(models.Model):
 	skill_1 = models.CharField(max_length=20, choices=SKILL_CHOICES)
 	skill_2 = models.CharField(max_length=20, choices=SKILL_CHOICES)
 	location = models.CharField(max_length=300, blank=True, null=True)
+	gender = models.CharField(max_length=10, choices=GENDER_CHOICES, null=True, blank=True)
 	
 	#대학생 전용
 	university = models.CharField(max_length=100, blank=True, null=True) #대학교
 	major = models.CharField(max_length=100, blank=True, null=True) # 본 전공
-	double_major = models.CharField(max_length=100, blank=True, null=True) # 복수전공
 	academic_status = models.CharField(max_length=20, blank=True, null=True) # 학년
 	 
 	#소상공인 전용
@@ -81,4 +86,3 @@ class Profile(models.Model):
 	business_number = models.CharField(max_length=30, blank=True, null=True) # 사업자번호
 	company_name = models.CharField( max_length=200, blank=True, null=True) # 업체명
 	business_type = models.CharField(max_length=100, blank=True, null=True) # 업종
-	business_cert = models.ImageField(upload_to="certs/", blank=True, null=True) #확인서: jpg
