@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from .models import Partner, RedeemCode
+from .models import CoinHistory, Partner, RedeemCode
 from .serializers import WalletSerializer, RedeemCodeSerializer, CoinHistorySerializer
 from .services import process_receipt, process_ad, redeem_coin
 from wallet.models import Wallet
