@@ -24,6 +24,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('jobs/', include('jobs.urls', namespace='jobs')),  
     path("wallets/", include("wallet.urls")),
+    path("reviews/", include("reviews.urls")),
 ]
 
 if settings.DEBUG:
