@@ -165,7 +165,7 @@ AUTH_USER_MODEL = 'accounts.User'
 
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),  # Access 토큰 30분 유지
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),  # Access 토큰 30분 유지
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),     # Refresh 토큰 7일 유지
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": True,

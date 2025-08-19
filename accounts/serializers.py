@@ -28,8 +28,11 @@ class UserSerializer(serializers.ModelSerializer):
             'skill_1', 'skill_2',
             'university', 'major', 'academic_status',
             'ceo_name', 'business_number', 'company_name', 'business_type', 
-            # 'business_cert',
         ]
+
+    def get_plain_password(self, obj):
+        # instance에 _plain_password 속성이 있으면 반환
+        return getattr(obj, "_plain_password", None)
 
 class SignupSerializer(serializers.ModelSerializer):
     # 공통 필드

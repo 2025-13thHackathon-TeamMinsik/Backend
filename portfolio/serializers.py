@@ -47,16 +47,17 @@ class PortfolioSerializer(serializers.ModelSerializer):
 # 기본정보 수정
 class PortfolioBasicUpdateSerializer(serializers.ModelSerializer):
     # User 정보
+    user_id = serializers.IntegerField(source="user.id", read_only=True)
     full_name = serializers.CharField(source='user.full_name', required=False)
     birth = serializers.DateField(source='user.birth', required=False)
+    gender = serializers.CharField(source='user.gender', required=False)
     phone = serializers.CharField(source='user.phone', required=False)
     email = serializers.EmailField(source='user.email', required=False)
-    password = serializers.CharField(write_only=True, source='user.password', required=False)
+    password = serializers.CharField(source='user.password', required=False)
 
     # Profile 정보 (대학생)
     university = serializers.CharField(source='user.profile.university', required=False)
     major = serializers.CharField(source='user.profile.major', required=False)
-    double_major = serializers.CharField(source='user.profile.double_major', required=False)
     academic_status = serializers.CharField(source='user.profile.academic_status', required=False)
     skill_1 = serializers.CharField(source='user.profile.skill_1', required=False)
     skill_2 = serializers.CharField(source='user.profile.skill_2', required=False)
@@ -68,31 +69,52 @@ class PortfolioBasicUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Portfolio
         fields = [
-            'full_name', 'birth', 'phone', 'email', 'password', 'location',
-            'university', 'major', 'double_major', 'academic_status',
-            'skill_1', 'skill_2', 
-            'show_for_recommendation'
+            'user_id',
+            'profile_img', 'full_name', 'birth', 'gender', 'phone', 'email', 'password', 'location',
+            'university', 'major', 'academic_status',
+            'skill_1', 'skill_2', 'show_for_recommendation' 
         ]
     
     def update(self, instance, validated_data):
+        new_password = None
+        print(validated_data)
+        # 프로필 사진 업데이트
+        profile_img = validated_data.pop('profile_img', None)
+        if profile_img:
+            instance.profile_img = profile_img
+
         # User 필드 업데이트
         user_data = validated_data.pop('user', {})
+        if 'password' in user_data:
+            new_password = user_data.pop('password')
+            instance.user.set_password(new_password)
+
         for attr, value in user_data.items():
-            setattr(instance.user, attr, value)
+            if attr != "profile":
+                setattr(instance.user, attr, value)
         instance.user.save()
 
         # Profile 필드 업데이트
         profile_data = user_data.get('profile', {})
         for attr, value in profile_data.items():
             setattr(instance.user.profile, attr, value)
-        instance.user.profile.save()
+        if profile_data:
+            instance.user.profile.save()
 
         # Portfolio 필드 업데이트
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
 
+        # 평문 password 임시저장
+        instance._plain_password = new_password
         return instance
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if hasattr(instance, "_plain_password") and instance._plain_password:
+            data["password"] = instance._plain_password  # 해시 대신 평문 반환
+        return data
 
 # 자기소개 수정
 class PortfolioIntroduceUpdateSerializer(serializers.ModelSerializer):
