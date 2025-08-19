@@ -1,6 +1,5 @@
 from openai import OpenAI
 from django.conf import settings
-from content_formatter import portfolio_input_data
 
 def generate_ai_portfolio(job_description, skills, reason, review):
 
