@@ -52,6 +52,14 @@ class JobPost(models.Model):
         return f"{self.owner.store_name} - {self.duration_time} ({self.payment_type})"
 
 class Application(models.Model):
+    STATUS_CHOICES = [
+        ('pending', '대기'),
+        ('accepted', '수락'),
+        ('rejected', '거절'),
+        ('matched', '매칭완료'),
+        ('completed', '작업완료'),
+    ]
+
     job_post = models.ForeignKey(
         JobPost,
         on_delete=models.CASCADE,
@@ -65,6 +73,8 @@ class Application(models.Model):
     applied_at = models.DateTimeField(auto_now_add=True)
     # 지원동기
     motivation = models.CharField(max_length=200, blank=True, null=True)
+    # 재능 나누기 요청 상태
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 
     def __str__(self):
         return f"{self.applicant} -> {self.job_post}"
