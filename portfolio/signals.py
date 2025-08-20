@@ -19,7 +19,7 @@ def create_ai_portfolio(sender, instance, created, **kwargs):
         # 기술
         skills = f"{activity.application.user.profile.skill_1}, {activity.application.user.profile.skill_2}"
         # 지원 동기
-        # reason = activity.application.reason
+        motivation = activity.application.motivation 
         # 후기
         review_content = instance.content
 
@@ -27,7 +27,7 @@ def create_ai_portfolio(sender, instance, created, **kwargs):
         ai_summary = generate_ai_portfolio(
             job_description=job_description,
             skills=skills,
-            reason=None,
+            motivation=motivation,
             review=review_content
         )
 
