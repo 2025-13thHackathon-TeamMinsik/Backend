@@ -63,6 +63,8 @@ class Application(models.Model):
         related_name='applications'
     )
     applied_at = models.DateTimeField(auto_now_add=True)
+    # 지원동기
+    motivation = models.CharField(max_length=200, blank=True, null=True)
 
     def __str__(self):
         return f"{self.applicant} -> {self.job_post}"
