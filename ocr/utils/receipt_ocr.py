@@ -7,7 +7,10 @@ from wallet.models import Wallet, CoinHistory
 from accounts.models import Profile, User
 
 # 소상공인 프로필에서 리스트 가져오기
-db_stores = list(Profile.objects.filter(role='owner').values('company_name', 'location'))
+try:
+    db_stores = list(Profile.objects.filter(role='owner').values('company_name', 'location'))
+except:
+    db_stores = []
 
 
 # OCR 전처리
