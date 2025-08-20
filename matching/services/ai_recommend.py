@@ -1,20 +1,21 @@
 from openai import OpenAI
 from django.conf import settings
-from content_formatter import student_info_to_json, jobs_DB_to_json, owner_info_to_json, students_DB_to_json
+from .content_formatter import student_info_to_json, jobs_DB_to_json, owner_info_to_json, students_DB_to_json
 from accounts.models import Profile
 
-def recommend_jobs_for_student(student_id, max_tokens=200):
-   """
-    사용자가 작성한 활동 내용과 관심사를 바탕으로
-    업종에 맞는 공고를 추천
-    """
+# 공고 추천하기
+def recommend_jobs(user_id, max_tokens=200):
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=settings.OPENROUTER_API_KEY,
     )
 
-    # 해당 대학생
-    student_info = Profile.objects.get(id=student_id)
+    # User ID 기준 Profile 조회
+    try:
+        student_info = Profile.objects.get(user_id=user_id)
+    except Profile.DoesNotExist:
+        return {"error": "해당 학생 프로필이 존재하지 않습니다."}
+
     # 모든 공고
     jobs_queryset = Profile.objects.filter(role='owner')
 
@@ -23,8 +24,9 @@ def recommend_jobs_for_student(student_id, max_tokens=200):
             "role": "system",
             "content": (
                 "당신은 대학생을 위해 최적의 맞춤 공고를 추천하는 AI입니다. "
-                "대학생이 설정한 관심 기술, 과거 활동과 공고의 평점, 필요 분야를 참고하여 "
-                "가장 알맞은 공고 5개의 id를 반환해주세요."
+                "대학생이 설정한 관심 기술, 공고와의 거리(근거리순), 공고의 업종을 참고하여 "
+                "가장 알맞은 공고 5개의 id만 JSON 배열 형식으로 반환해주세요. 예: [1, 2, 3, 4, 5]"
+                "만약 공고의 개수가 5개보다 적다면 모두 반환해 주세요."
             )
         },
         {
@@ -52,11 +54,8 @@ def recommend_jobs_for_student(student_id, max_tokens=200):
 
     return completion.choices[0].message.content
 
-def recommend_jobs_for_student(job_id, max_tokens=200):
-   """
-    소상공인이 설정한 관심 기술, 도우미의 과거활동, 평점, 관심 분야, 현재 위치를 바탕으로
-    알맞는 도우미를 추천
-    """
+# 대학생 추천하기
+def recommend_students(job_id, max_tokens=200):
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=settings.OPENROUTER_API_KEY,
@@ -73,7 +72,8 @@ def recommend_jobs_for_student(job_id, max_tokens=200):
             "content": (
                 "당신은 소상공인을 위해 최적의 대학생 도우미를 추천하는 AI입니다. "
                 "소상공인이 설정한 관심 기술, 도우미의 평점, 관심 분야를 참고하여 "
-                "가장 알맞은 도우미 5명의 id를 반환해주세요."
+                "가장 알맞은 대학생 5명의 id만 JSON 배열 형식으로 반환해주세요. 예: [1, 2, 3, 4, 5]"
+                "만약 대학생이 5명보다 적다면 모두 반환해 주세요."
             )
         },
         {

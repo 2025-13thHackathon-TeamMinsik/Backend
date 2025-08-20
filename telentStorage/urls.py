@@ -28,6 +28,7 @@ urlpatterns = [
     path("portfolio/", include("portfolio.urls")),
     path("reviews/", include("reviews.urls")),
     path("recruits/", include("recruits.urls")),
+    path("matching/", include("matching.urls")),
 ]
 
 if settings.DEBUG:
