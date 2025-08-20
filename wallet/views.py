@@ -7,6 +7,7 @@ from .models import CoinHistory, Partner, RedeemCode
 from .serializers import WalletSerializer, RedeemCodeSerializer, CoinHistorySerializer
 from .services import process_receipt, process_ad, redeem_coin
 from wallet.models import Wallet
+from django.conf import settings
 import os
 from ocr.utils.receipt_ocr import preprocess_receipt, extract_receipt_text, parse_receipt, check_and_award
 from accounts.models import Profile
@@ -28,7 +29,7 @@ class ReceiptView(APIView):
             return Response({"error": "파일이 업로드되지 않았습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         # 임시 경로 저장
-        tmp_dir = 'tmp_receipts'
+        tmp_dir = os.path.join(settings.MEDIA_ROOT, 'tmp_receipts')
         os.makedirs(tmp_dir, exist_ok=True)
         tmp_path = os.path.join(tmp_dir, uploaded_file.name)
         with open(tmp_path, 'wb+') as f:
