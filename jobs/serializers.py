@@ -60,7 +60,7 @@ class JobPostListSerializer(serializers.ModelSerializer):
             return obj.liked_users.filter(id=user.id).exists()
         return False
 
-#공고 디테일 조회용
+#공고 디테일 조회용 - 소상공인
 class JobPostSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(source='owner.profile.company_name', read_only=True)
     business_type = serializers.CharField(source='business_type.profile.company_name', read_only=True)
@@ -131,4 +131,3 @@ class JobPostSerializer(serializers.ModelSerializer):
         if user.is_authenticated:
             return obj.liked_users.filter(id=user.id).exists()
         return False
-

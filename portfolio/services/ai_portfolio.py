@@ -1,7 +1,7 @@
 from openai import OpenAI
 from django.conf import settings
 
-def generate_ai_portfolio(job_description, skills, reason, review):
+def generate_ai_portfolio(job_description, skills, motivation, review):
 
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
@@ -19,7 +19,7 @@ def generate_ai_portfolio(job_description, skills, reason, review):
 
     user_prompt = f"""
         공고 내용: {job_description}
-        지원 동기: {reason}
+        지원 동기: {motivation}
         후기: {review}
         기술: {skills}
     """
