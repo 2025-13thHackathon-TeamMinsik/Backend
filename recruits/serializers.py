@@ -3,6 +3,7 @@ from jobs.models import JobPost, Application
 from accounts.models import Profile, User
 from portfolio.models import Portfolio, Activities, TalentImage
 from reviews.models import EmployerReview
+from django.db.models import Avg
 
 # 재능 지원함
 class JobAndRequestedSerializer(serializers.ModelSerializer):
@@ -94,7 +95,7 @@ class StudentDetailSerializer(serializers.ModelSerializer):
 
     def get_portfolio(self, obj):
         try:
-            portfolio = Portfolio.objects.get(user=obj.obj.applicant)
+            portfolio = Portfolio.objects.get(user=obj.applicant)
 
             # 재능 이미지
             talent_images = []

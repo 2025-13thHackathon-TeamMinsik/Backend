@@ -5,22 +5,22 @@ User = settings.AUTH_USER_MODEL
 
 # Create your models here.
 
-# 대학생에게 재능 요청하기
-class TalentRequest(models.Model):
-    STATUS_CHOICES = [
-        ('pending', '대기'),
-        ('accepted', '수락'),
-        ('rejected', '거절'),
-    ]
-
-    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requests_received')
-    job_post = models.ForeignKey(JobPost, on_delete=models.CASCADE, related_name='requests_sent')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requests_created')
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+# 소상공인 -> 추천 대학생
+class MatchRequest(models.Model):
+    # 요청 보낸 소상공인
+    employer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_requests")
+    # 요청 받은 학생
+    helper = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_requests")
+    # 어떤 공고
+    job_post = models.ForeignKey(JobPost, on_delete=models.CASCADE, related_name="match_requests")
+    # 요청 진행 상태
+    status = models.CharField(
+        max_length=20,
+        choices=[("pending", "대기"), ("accepted", "수락"), ("rejected", "거절")],
+        default="pending"
+    )
+    # 요청 시각
     created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('student', 'job_post')
 
 # 추천 공고
 class RecommendedJobPost(models.Model):

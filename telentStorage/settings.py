@@ -54,6 +54,8 @@ INSTALLED_APPS = [
     'portfolio',
     'reviews',
     'wallet',
+    'ocr',
+    'recruits',
 ]
 
 MIDDLEWARE = [

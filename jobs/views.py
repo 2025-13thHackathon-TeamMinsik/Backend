@@ -1,12 +1,16 @@
+from django.shortcuts import render, get_object_or_404
 from rest_framework import generics, permissions
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from .models import JobPost
-from .serializers import JobPostSerializer,JobPostListSerializer
+from .models import JobPost, Application
+from .serializers import JobPostSerializer,JobPostListSerializer,ApplicationSerializer
 from django.db.models import Q
 from rest_framework.views import APIView
 from django.db.models import Count
 from geopy.distance import geodesic
+from matching.utils import generate_nickname
+from notifications.models import Notification
 
 class JobPostListView(generics.ListAPIView):
     serializer_class = JobPostListSerializer
@@ -193,3 +197,54 @@ class JobPostSearchListView(generics.ListAPIView):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+
+# 학생 -> 공고 지원
+class ApplicationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, job_id):
+        job = get_object_or_404(JobPost, id=job_id)
+        applicant = request.user  # 지원하는 학생 (로그인 사용자)
+        motivation = request.data.get('motivation', '')
+
+        application, created = Application.objects.get_or_create(
+            job_post=job,
+            applicant=applicant,
+            defaults={"motivation": motivation}
+        )
+
+        if not created and motivation:
+            application.motivation = motivation
+            application.save()
+
+        serializer = ApplicationSerializer(application)
+        return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+# 소상공인이 공고에 지원한 학생 수락/거절 처리
+class AcceptApplicationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, application_id):
+        application = get_object_or_404(Application, id=application_id)
+        job_owner = application.job_post.owner
+
+        # 해당 공고 소상공인만 수락/거절 가능
+        if request.user != job_owner:
+            return Response({"error": "권한이 없습니다."}, status=status.HTTP_403_FORBIDDEN)
+        
+        # 수락/거절 두 가지만 가능
+        status_choice = request.data.get("status")
+        if status_choice not in ["accepted", "rejected"]:
+            return Response({"error": "status는 accepted 또는 rejected만 가능합니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 상태 저장
+        application.status = status_choice
+        application.save()
+
+        return Response({
+            "id": application.id, # 지원서 id
+            "job_post": application.job_post.id,
+            "application": application.applicant.id,
+            "status": application.status,
+            "message": f"Application이 {application.status} 처리 되었습니다."
+        }, status=status.HTTP_200_OK) 
