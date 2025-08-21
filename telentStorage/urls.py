@@ -29,6 +29,7 @@ urlpatterns = [
     path("reviews/", include("reviews.urls")),
     path("recruits/", include("recruits.urls")),
     path("matching/", include("matching.urls")),
+    path("notifications/", include("notifications.urls")),
 ]
 
 if settings.DEBUG:

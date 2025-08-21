@@ -3,17 +3,50 @@ from django.shortcuts import render, get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import status
 from datetime import datetime, timedelta
 from django.utils import timezone
-from .models import RecommendedJobPost, RecommendedStudent
+from .serializers import MatchRequestSerializer
+from notifications.models import Notification
+from .models import RecommendedJobPost, RecommendedStudent, MatchRequest
 from accounts.models import User, Profile
 from .services.ai_recommend import recommend_jobs, recommend_students
 
 # Create your views here.
 
-# 대학생-재능 나누기
+# 소상공인->학생 재능 요청하기
+class MatchRequestView(APIView):
+    permission_classes = [IsAuthenticated]
 
-# 소상공인-재능 요청하기
+    def post(self, request):
+        employer = request.user
+        helper_id = request.data.get('helper_id')
+        job_id = request.data.get('job_id')
+        match_request, _ = MatchRequest.objects.get_or_create(
+            employer=employer,
+            helper_id=helper_id,
+            job_post_id=job_id
+        )
+        serializer = MatchRequestSerializer(match_request)
+        return Response(serializer.data)
+
+# 학생이 소상공인의 요청 수락/거절 처리
+class StudentRespondMatchRequestView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, request_id):
+        match_request = get_object_or_404(MatchRequest, id=request_id, helper=request.user)
+
+        # 요청받은 학생만 응답 가능
+        if match_request.helper != request.user:
+            return Response({"error": "권한이 없습니다."}, status=403)
+
+        status = request.data.get("status")  # 'accepted' or 'rejected'
+        match_request.status = status
+        match_request.save()
+
+        serializer = MatchRequestSerializer(match_request)
+        return Response(serializer.data)
 
 # 추천 공고
 class RecommendJobsView(APIView):

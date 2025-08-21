@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import JobPost
+from .models import JobPost, Application
 from geopy.distance import geodesic
 
 #전체 조회용
@@ -131,3 +131,10 @@ class JobPostSerializer(serializers.ModelSerializer):
         if user.is_authenticated:
             return obj.liked_users.filter(id=user.id).exists()
         return False
+
+# 지원서 신청
+class ApplicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Application
+        fields = ["id", "job_post", "applicant", "motivation", "status", "applied_at"]
+        read_only_fields = ["status", "applied_at"]

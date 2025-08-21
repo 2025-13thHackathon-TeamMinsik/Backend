@@ -72,7 +72,7 @@ class Profile(models.Model):
 	
 	#공통 프로필
 	skill_1 = models.CharField(max_length=20, choices=SKILL_CHOICES)
-	skill_2 = models.CharField(max_length=20, choices=SKILL_CHOICES)
+	skill_2 = models.CharField(max_length=20, choices=SKILL_CHOICES, blank=True, null=True)
 	location = models.CharField(max_length=300, blank=True, null=True)
 	gender = models.CharField(max_length=10, choices=GENDER_CHOICES, null=True, blank=True)
 	
