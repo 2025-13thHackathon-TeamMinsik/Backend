@@ -1,8 +1,9 @@
 from django.urls import path
 from .views import (
     JobPostListView, JobPostDetailView,
-    JobPostCreateView, JobPostUpdateView,JobPostLikeToggleView, JobPostDeleteView, 
-    JobPostHistoryView,JobPostSearchListView, ApplicationView, AcceptApplicationView
+    JobPostCreateView, JobPostUpdateView,JobPostLikeToggleView, JobPostDeleteView,
+    JobPostHistoryView,JobPostSearchListView, ApplicationView, AcceptApplicationView,MyJobPostListView,
+    JobPostDetailWithEmployeeReviewsView
 )
 
 app_name = 'jobs'
@@ -24,7 +25,7 @@ urlpatterns = [
     path('posts/<int:pk>/delete/', JobPostDeleteView.as_view(), name='post-delete'),
 
     # 공고 이력 조회
-    path('posts/history/', JobPostHistoryView.as_view(), name='post-history'),
+    path('posts/history/', MyJobPostListView.as_view(), name='post-history'),
     # 공고 내역 검색
     path('search/', JobPostSearchListView.as_view(), name='jobpost-search'),
     # 공고 좋아요 
@@ -33,5 +34,10 @@ urlpatterns = [
     path('applications/<int:job_id>/', ApplicationView.as_view(), name='apply_job'),
     # 소상공인의 수락/거절
     path('applications/<int:application_id>/respond/', AcceptApplicationView.as_view(), name='accept_application'),
-
+    # 사장 공고 이력 상세보기 + 후기 포함
+    path(
+        'posts/<int:pk>/detail_with_employee_reviews/', 
+        JobPostDetailWithEmployeeReviewsView.as_view(), 
+        name='jobpost_detail_with_employee_reviews'
+    ),
 ]

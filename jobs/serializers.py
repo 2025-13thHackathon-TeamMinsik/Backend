@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import JobPost, Application
 from geopy.distance import geodesic
+from reviews.models import EmployeeReview
+from reviews.serializers import EmployeeReviewSerializer
 
 #전체 조회용
 class JobPostListSerializer(serializers.ModelSerializer):
@@ -12,7 +14,7 @@ class JobPostListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = JobPost
-        fields = ['id', 'company_name', 'description', 'image', 'distance_m','is_liked']
+        fields = ['id', 'payment_type','company_name', 'description', 'image', 'distance_m','is_liked']
     
     def get_company_name(self, obj):
         if hasattr(obj.owner, 'profile'):
@@ -70,11 +72,12 @@ class JobPostSerializer(serializers.ModelSerializer):
     business_type = serializers.CharField(source='owner.profile.business_type', read_only=True)
     image = serializers.SerializerMethodField()
     distance_m = serializers.SerializerMethodField()
-
+    
     class Meta:
         model = JobPost
         fields = [
             'id',
+            'payment_type',
             'company_name',
             'distance_m',
             'ceo_name',
@@ -138,3 +141,35 @@ class ApplicationSerializer(serializers.ModelSerializer):
         model = Application
         fields = ["id", "job_post", "applicant", "motivation", "status", "applied_at"]
         read_only_fields = ["status", "applied_at"]
+
+# 내가 올린 공고 모아보기
+class MyJobPostListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobPost
+        fields = ['id', 'created_at']  
+
+class JobPostDetailWithEmployeeReviewsSerializer(serializers.ModelSerializer):
+    employee_reviews = serializers.SerializerMethodField()
+
+    class Meta:
+        model = JobPost
+        fields = [
+            'id',
+            'company_name',
+            'distance_m',
+            'ceo_name',
+            'business_type',
+            'address',
+            'phone_number',
+            'duration_time',
+            'payment_info',
+            'description',
+            'image',
+            'created_at',
+            'updated_at',
+            'employee_reviews',
+        ]
+
+    def get_employee_reviews(self, obj):
+        reviews = EmployeeReview.objects.filter(job=obj, completed=True)
+        return EmployeeReviewSerializer(reviews, many=True).data

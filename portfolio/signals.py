@@ -7,29 +7,33 @@ from .services.ai_portfolio import generate_ai_portfolio
 # 리뷰 작성되면 AI 포트폴리오 작성 함수 호출
 @receiver(post_save, sender=EmployeeReview)
 def create_ai_portfolio(sender, instance, created, **kwargs):
+    if not created:
+        return
 
-    if created:
-        try:
-            activity = instance.activity
-        except Activities.DoseNotExist:
-            return
+    if not hasattr(instance, 'activity') or instance.activity is None:
+        return
 
-        # 공고 내용
-        job_description = activity.job.description 
-        # 기술
-        skills = f"{activity.application.user.profile.skill_1}, {activity.application.user.profile.skill_2}"
-        # 지원 동기
-        motivation = activity.application.motivation 
-        # 후기
-        review_content = instance.content
+    try:
+        activity = instance.activity
+    except Activities.DoesNotExist:
+        return
 
-        # AI 포트폴리오 생성 함수 호출
-        ai_summary = generate_ai_portfolio(
-            job_description=job_description,
-            skills=skills,
-            motivation=motivation,
-            review=review_content
-        )
+    # 공고 내용
+    job_description = activity.job.description 
+    # 기술
+    skills = f"{activity.application.user.profile.skill_1}, {activity.application.user.profile.skill_2}"
+    # 지원 동기
+    motivation = activity.application.motivation 
+    # 후기
+    review_content = instance.content
 
-        activity.ai_portfolio_summary = ai_text
-        activity.save()
+    # AI 포트폴리오 생성 함수 호출
+    ai_summary = generate_ai_portfolio(
+        job_description=job_description,
+        skills=skills,
+        motivation=motivation,
+        review=review_content
+    )
+
+    activity.ai_portfolio_summary = ai_summary
+    activity.save()
