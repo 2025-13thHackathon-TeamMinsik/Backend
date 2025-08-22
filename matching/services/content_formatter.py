@@ -21,25 +21,28 @@ def jobs_DB_to_json(jobs_queryset):
     jobs = []
 
     for job in jobs_queryset:
-        if job.role != 'owner':
-            continue
+        owner = job.owner
+        skills = []
+        if hasattr(owner, 'skill_1'):
+            skills.append(owner.skill_1)
+        if hasattr(owner, 'skill_2'):
+            skills.append(owner.skill_2)
 
-        skills = ", ".join(filter(None, [job.skill_1, job.skill_2]))
-        
         jobs.append({
             "id": job.id,
-            "skills": skills,
-            "latitude": None, #job.store_lat
-            "longitude": None, #job.store_lng
+            "skills": ", ".join(filter(None, skills)) or "기본 기술",
+            "latitude": job.store_lat or 0.0,
+            "longitude": job.store_lng or 0.0,
         })
+    print("공고리스트 최종:", jobs)
     return json.dumps(jobs, ensure_ascii=False)
 
 # 해당 소상공인 DB 데이터를 Json으로 format
-def owner_info_to_json(job):
-    skills = list(filter(None, [job.skill_1, job.skill_2]))\
+def owner_info_to_json(owner_profile):
+    skills = list(filter(None, [owner_profile.skill_1, owner_profile.skill_2]))
     
     owner_dict = {
-        "id":job.owner.id,
+        "id":owner_profile.user.id,
         "skills":skills
     }
     return json.dumps(owner_dict, ensure_ascii=False)
@@ -54,7 +57,7 @@ def students_DB_to_json(students_queryset):
             continue
     
         # 학생 평점 계산
-        reviews = EmployerReview.objects.filter(employee.user)
+        reviews = EmployerReview.objects.filter(employee=s.user)
         avg_scores = reviews.aggregate(
             avg_participation=Avg('participation'),
             avg_diligence=Avg('diligence'),
@@ -64,6 +67,7 @@ def students_DB_to_json(students_queryset):
         )
 
         score_values = [v for v in avg_scores.values() if v is not None]
+        avg_score = sum(score_values)/len(score_values) if score_values else 0
         skills = list(filter(None, [s.skill_1, s.skill_2]))
 
         students.append({

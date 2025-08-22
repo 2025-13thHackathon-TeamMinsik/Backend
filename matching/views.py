@@ -1,4 +1,5 @@
 import json
+import ast
 from django.shortcuts import render, get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -10,6 +11,10 @@ from .serializers import MatchRequestSerializer
 from notifications.models import Notification
 from .models import RecommendedJobPost, RecommendedStudent, MatchRequest
 from accounts.models import User, Profile
+from portfolio.models import Portfolio
+from reviews.models import EmployerReview
+from django.db.models import Avg
+from jobs.models import JobPost
 from .services.ai_recommend import recommend_jobs, recommend_students
 
 # Create your views here.
@@ -52,79 +57,205 @@ class StudentRespondMatchRequestView(APIView):
 class RecommendJobsView(APIView):
     permission_classes = [IsAuthenticated]    
 
-    def get(self, request, student_id):
-        # 1. 학생 프로필 확인
+    def get(self, request):
+        user = request.user
+        
+        # 로그인한 사용자가 학생인지 확인
         try:
-            student_info = Profile.objects.get(user_id=student_id)
+            student_profile = Profile.objects.get(user=user, role='student')
         except Profile.DoesNotExist:
-            return Response({"error": "해당 학생 프로필이 존재하지 않습니다."}, status=404)
+            return Response({"error": "학생만 접근 가능합니다."}, status=403)
 
-        today = timezone.now().date()
-
-        # 2. 오늘 추천이 이미 존재하는지 확인
-        recommended_jobs_qs = RecommendedJobPost.objects.filter(
-            student_id=student_info.user.id,
-            created_at__date=today
-        )
-
-        if recommended_jobs_qs.exists(): # 오늘 추천공고 생성
-            # DB에서 가져오기
-            recommended_jobs = recommended_jobs_qs
-        else:
-            # AI 호출 후 추천 생성
-            try:
-                recommended_job_ids = recommend_jobs(student_info.user.id)
-                recommended_jobs = []
-                for job_id in recommended_job_ids:
-                    job_post = JobPost.objects.get(id=job_id)
-                    rjp = RecommendedJobPost.objects.create(
-                        student=student_info.user,
-                        job_post=job_post
-                    )
-                    recommended_jobs.append(rjp)
-            except Exception as e:
-                return Response(
-                    {"error": f"추천 공고 생성 중 오류 발생: {str(e)}"},
-                    status=500
-                )
-
-        # 3. 추천 공고 ID 리스트 반환
-        job_ids = [rjp.job_post.id for rjp in recommended_jobs]
-        return Response({"recommended_jobs": job_ids})
-
-# 추천 대학생
-class RecommendStudentsView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, job_id):
-        try:
-            job_post = JobPost.objects.get(id=job_id)
-        except JobPost.DoesNotExist:
-            return Response({"error": "해당 공고가 존재하지 않습니다."}, status=404)
-
-        # 오늘 이미 추천 생성했는지 체크
-        today = timezone.now().date()
-        qs_today = RecommendedStudent.objects.filter(job_post=job_post, created_at__date=today)
-        if qs_today.exists():
-            # 이미 오늘 생성한 추천이면 DB에서 가져오기
-            recommended_students = [r.student.id for r in qs_today]
-            return Response({"recommended_students": recommended_students})
+        # 테스트용: 오늘 추천 체크 로직 주석처리
+        # today = timezone.now().date()
+        # recommended_jobs_qs = RecommendedJobPost.objects.filter(
+        #     student=user,
+        #     created_at__date=today
+        # )
+        # if recommended_jobs_qs.exists():
+        #     recommended_jobs = self.get_jobs_detail([r.job_post for r in recommended_jobs_qs])
+        #     return Response({"recommended_jobs": recommended_jobs})
 
         # AI 호출
         try:
-            ai_response = recommend_students(job_id)
-            student_ids = json.loads(ai_response)  
+            ai_response = recommend_jobs(user.id)  # 로그인한 사용자 ID 전달
+            print("AI 반환값:", ai_response)
+            
+            if isinstance(ai_response, str):
+                try:
+                    # 마크다운 코드 블록 제거
+                    json_str = ai_response.strip()
+                    if json_str.startswith('```json'):
+                        json_str = json_str.replace('```json', '').replace('```', '').strip()
+                    elif json_str.startswith('```'):
+                        json_str = json_str.replace('```', '').strip()
+                    
+                    job_ids = json.loads(json_str)
+                    print(f"파싱 성공: {job_ids}")
+                except json.JSONDecodeError as e:
+                    print(f"JSON 파싱 실패: {e}")
+                    print(f"파싱 시도한 문자열: '{json_str}'")
+                    job_ids = []
+            else:
+                job_ids = ai_response
+        except Exception as e:
+            return Response({"error": f"추천 공고 생성 중 오류 발생: {str(e)}"}, status=500)
+
+        # 디버깅 로그
+        print(f"AI가 반환한 job_ids: {job_ids}")
+        print(f"job_ids 타입: {type(job_ids)}")
+
+        valid_jobs = []
+        for job_id in job_ids:
+            print(f"\n=== job_id {job_id} 처리 중 ===")
+            try:
+                owner_user = User.objects.get(id=int(job_id))
+                owner_profile = Profile.objects.get(user=owner_user, role='owner')
+                print(f"✅ Owner Profile 찾음: {owner_user}")
+                
+                # 테스트용: DB 저장 로직 주석처리
+                # RecommendedJobPost.objects.create(student=user, job_post=job_post)
+                valid_jobs.append(owner_profile)
+                print(f"✅ valid_jobs에 추가됨")
+                
+            except (User.DoesNotExist, Profile.DoesNotExist):
+                print(f"❌ Profile ID {job_id} (role='owner') 찾을 수 없음")
+                continue
+            except Exception as e:
+                print(f"❌ 기타 오류: {e}")
+                continue
+
+        print(f"\n최종 valid_jobs 개수: {len(valid_jobs)}")
+
+        if not valid_jobs:
+            return Response({
+                "recommended_jobs": [],
+                "message": "현재 추천할 공고가 없습니다."
+            })
+
+        # 공고 정보 가져오기
+        recommended_jobs = self.get_jobs_detail(valid_jobs)
+        return Response({"recommended_jobs": recommended_jobs})
+
+    def get_jobs_detail(self, owner_profiles):
+        jobs_detail = []
+        
+        for owner_profile  in owner_profiles:
+            try:
+                owner_jobs = JobPost.objects.get(owner=owner_profile.user)
+
+                # 이미지 우선순위: image_from_ai 먼저, 없으면 image_from_gallery
+                job_image = None
+                if owner_jobs.image_from_ai:
+                    job_image = owner_jobs.image_from_ai.url if hasattr(owner_jobs.image_from_ai, 'url') else owner_jobs.image_from_ai
+                elif owner_jobs.image_from_gallery:
+                    job_image = owner_jobs.image_from_gallery.url if hasattr(owner_jobs.image_from_gallery, 'url') else owner_jobs.image_from_gallery
+                
+                job_data = {
+                    "id": owner_profile.user.id,
+                    "company_name": getattr(owner_profile, "company_name", "알 수 없음"),
+                    "description": (getattr(owner_profile, "description", "")[:25] + "...") if getattr(owner_profile, "description", "") else "",
+                    "image": job_image,
+                    "latitude": getattr(owner_profile, "store_lat", None),
+                    "longitude": getattr(owner_profile, "store_lng", None),
+                }
+                
+                jobs_detail.append(job_data)
+                
+            except Exception as e:
+                print(f"소상공인 {owner_profile.user.id} 정보 가져오기 실패: {e}")
+                continue
+        
+        return jobs_detail
+
+# 추천 대학생
+# views.py
+class RecommendStudentsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # 로그인한 사용자가 소상공인인지 확인
+        try:
+            owner_profile = Profile.objects.get(user=user, role='owner')
+        except Profile.DoesNotExist:
+            return Response({"error": "소상공인만 접근 가능합니다."}, status=403)
+
+        # 오늘 이미 추천 생성했는지 체크
+        # today = timezone.now().date()
+        # qs_today = RecommendedStudent.objects.filter(owner=user, created_at__date=today)
+        # if qs_today.exists():
+        #     recommended_students = [r.student.id for r in qs_today]
+        #     return Response({"recommended_students": recommended_students})
+
+        # AI 호출
+        try:
+            ai_response = recommend_students(owner_profile)  # owner_profile 객체를 그대로 전달
+            print("AI 반환값:", ai_response)
+            if isinstance(ai_response, str):
+                try:
+                    student_ids = json.loads(ai_response)
+                except json.JSONDecodeError:
+                    student_ids = []
+            else:
+                student_ids = ai_response
         except Exception as e:
             return Response({"error": f"추천 학생 생성 중 오류 발생: {str(e)}"}, status=500)
 
-        recommended_students = []
+        # AI 호출 후 추가
+        print(f"AI가 반환한 student_ids: {student_ids}")
+        print(f"student_ids 타입: {type(student_ids)}")
+
+        valid_students = []
         for student_id in student_ids:
+            print(f"\n=== student_id {student_id} 처리 중 ===")
             try:
-                student = User.objects.get(id=student_id)
-                r = RecommendedStudent.objects.create(student=student, job_post=job_post)
-                recommended_students.append(student.id)
-            except User.DoesNotExist:
-                # 없는 학생이면 무시
+                student_profile = Profile.objects.get(id=int(student_id), role='student')
+                print(f"✅ Profile 찾음: {student_profile}")
+                student = student_profile.user
+                print(f"✅ User 찾음: {student.full_name}")
+                # DB에 저장
+                # RecommendedStudent.objects.create(student=student, owner=user)
+                valid_students.append(student)
+                print(f"✅ valid_students에 추가됨")
+            except Profile.DoesNotExist:
+                print(f"Profile ID {student_id} 찾을 수 없음")
                 continue
 
+        if not valid_students:
+            return Response({
+                "recommended_students": [],
+                "message": "현재 추천할 학생이 없습니다."
+            })
+        # 학생 정보 가져오기
+        recommended_students = self.get_students_detail(valid_students)
         return Response({"recommended_students": recommended_students})
+
+
+    def get_students_detail(self, students):
+        students_detail = []
+
+        for student in students:
+            try:
+                portfolio = Portfolio.objects.filter(user=student).first()
+                profile_image = portfolio.profile_image.url if portfolio and portfolio.profile_image else None
+                
+                employer_review = EmployerReview.objects.filter(employee=student).first()
+
+                student_data = {
+                    "id": student.id,
+                    "name": student.full_name,
+                    "profile_image": profile_image,
+                    "participation": employer_review.participation if employer_review else 0,
+                    "diligence": employer_review.diligence if employer_review else 0,
+                    "punctuality": employer_review.punctuality if employer_review else 0,
+                    "cheerful_attitude": employer_review.cheerful_attitude if employer_review else 0,
+                    "politeness": employer_review.politeness if employer_review else 0,
+                }
+                students_detail.append(student_data) 
+            except Exception as e:
+                print(f"학생 {student.id} 정보 가져오기 실패: {e}")
+                continue
+        
+        return students_detail
