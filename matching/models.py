@@ -34,8 +34,9 @@ class RecommendedJobPost(models.Model):
 # 추천 대학생
 class RecommendedStudent(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recommendations_from_jobs')
-    job_post = models.ForeignKey(JobPost, on_delete=models.CASCADE, related_name='recommended_for_students')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recommended_students')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('job_post', 'student')  # 중복 방지
+        unique_together = ('owner', 'student')  # 같은 소상공인에게 동일 학생 추천 방지
+        ordering = ['-created_at']
