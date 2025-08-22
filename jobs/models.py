@@ -78,3 +78,4 @@ class Application(models.Model):
 
     def __str__(self):
         return f"{self.applicant} -> {self.job_post}"
+

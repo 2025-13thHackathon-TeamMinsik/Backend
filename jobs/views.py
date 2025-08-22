@@ -4,13 +4,18 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from .models import JobPost, Application
-from .serializers import JobPostSerializer,JobPostListSerializer,ApplicationSerializer
+from .serializers import JobPostSerializer,JobPostListSerializer,ApplicationSerializer,MyJobPostListSerializer,JobPostDetailWithEmployeeReviewsSerializer
 from django.db.models import Q
 from rest_framework.views import APIView
 from django.db.models import Count
 from geopy.distance import geodesic
 from matching.utils import generate_nickname
 from notifications.models import Notification
+from rest_framework.exceptions import ValidationError
+from reviews.models import EmployerReview, EmployeeReview
+from matching.models import MatchRequest
+from reviews.serializers import EmployeeReviewSerializer
+from reviews.models import EmployeeReview
 
 class JobPostListView(generics.ListAPIView):
     serializer_class = JobPostListSerializer
@@ -75,14 +80,23 @@ class JobPostCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if JobPost.objects.filter(owner=user).exists():
-            raise PermissionError("이미 공고를 1개 이상 등록하였습니다.")
+        last_job = JobPost.objects.filter(owner=user).order_by('-created_at').first()
+
+        if last_job:
+            matching_done = MatchRequest.objects.filter(job_post=last_job, status="accepted").exists()
+            if not matching_done:
+                raise ValidationError("이전 공고의 매칭이 완료되지 않아 새 공고를 작성할 수 없습니다. 기존 공고는 수정/삭제만 가능합니다.")
+
+            employer_review_done = EmployerReview.objects.filter(job=last_job, completed=True).exists()
+            employee_review_done = EmployeeReview.objects.filter(job=last_job, completed=True).exists()
+            if not (employer_review_done and employee_review_done):
+                raise ValidationError("이전 공고의 모든 리뷰가 완료되어야 새 공고를 작성할 수 있습니다.")
 
         # 모바일에서 받은 GPS 좌표
         store_lat = self.request.data.get('store_lat')
         store_lng = self.request.data.get('store_lng')
 
-        # 이미지 파일 가져오기 (form-data에서 업로드된 경우)
+        # 이미지 파일 가져오기
         image_from_gallery = self.request.FILES.get('image_from_gallery')
         image_from_ai = self.request.FILES.get('image_from_ai')
 
@@ -248,3 +262,25 @@ class AcceptApplicationView(APIView):
             "status": application.status,
             "message": f"Application이 {application.status} 처리 되었습니다."
         }, status=status.HTTP_200_OK) 
+    
+ # 내가 쓴 공고 조회 (로그인 필요)
+class MyJobPostListView(generics.ListAPIView):
+    serializer_class = MyJobPostListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return JobPost.objects.filter(owner=user).order_by('-created_at')   
+    
+#후기랑 상세 공고 같이 보기
+class JobPostDetailWithEmployeeReviewsView(generics.RetrieveAPIView):
+    queryset = JobPost.objects.all()
+    serializer_class = JobPostSerializer
+
+    def retrieve(self, request, *args, **kwargs):
+        job = self.get_object()
+        job_data = self.get_serializer(job).data
+        reviews = EmployeeReview.objects.filter(job=job, completed=True)
+        reviews_data = EmployeeReviewSerializer(reviews, many=True).data
+        job_data['reviews'] = reviews_data
+        return Response(job_data)
