@@ -43,47 +43,52 @@ def extract_receipt_text(image):
 
 # 정보 추출
 def parse_receipt(text):
-    text = text.replace('\n', ' ').replace('\r', ' ')  # 줄바꿈 제거
+    text = text.replace('\n', ' ').replace('\r', ' ')
+    text = re.sub(r'\s+', '', text) 
 
-    # 1. 업체명 
-    store_match = re.search(r"(업체명|상호|가게|상호명)?\s*[:：]?\s*([^\d:：]+)", text)
-    store_name = store_match.group(2).strip() if store_match else None
+    # 업체명
+    store_match = re.search(r"(상호명|업체명|상호)\s*[:：]?\s*([가-힣A-Za-z0-9]+)", text)
+    store_name = store_match.group(2) if store_match else None
+    if store_name:
+        store_name = re.sub(r'등록번호.*', '', store_name)
 
-    # 2. 금액 
-    
-    amount_match = re.search(r"(총액|금액|합계)?\s*[:：]?\s*([\d,]+)원?", text)
-    if amount_match:
-        amount = int(amount_match.group(2).replace(',', ''))
+    # 금액
+    amount = None
+    amount_matches = re.findall(r'(?:합계금액|총액|금액)[^0-9]*([\d,]+)', text)
+    if amount_matches:
+        amount = int(amount_matches[-1].replace(',', ''))
     else:
         nums = re.findall(r'\d{3,}', text)
-        amount = int(nums[-1]) if nums else None
+        if nums:
+            amount = int(nums[-1].replace(',', ''))
 
-    # 3. 지역
-    region_match = re.search(r"(지역|주소)?\s*[:：]?\s*([가-힣\s]+)", text)
-    if region_match:
-        region = region_match.group(2).strip()
-        region = ' '.join(region.split()[:2])
-    else:
-        region = None
+    # 지역
+    region_match = re.search(r"(주소)[^가-힣]*([가-힣]+)", text)
+    region = region_match.group(2) if region_match else None
+
+    # 시/구 단위만 추출
+    if region:
+        parts = re.findall(r'[가-힣]+[시구]', region)
+        if parts:
+            region = parts[-1]
 
     return store_name, amount, region
 
+
 # DB 검증 후 코인 적립 가능 여부
 def check_and_award(store_name, region, db_store_list):
-    """
-    db_store_list: [{'company_name': 'ABC 베이커리', 'location': '서울 강남구'}]
-    """
     if not store_name or not region:
         return False
 
-    store_name_normalized = store_name.replace(" ", "").lower()
-    region_normalized = region.replace(" ", "").lower()
+    store_name_normalized = store_name.replace(" ", "").strip().lower()
+    region_normalized = region.replace(" ", "").strip().lower()
 
     for store in db_store_list:
-        company_name_db = store.get('company_name', '').replace(" ", "").lower()
-        location_db = store.get('location', '').replace(" ", "").lower()
+        company_name_db = store.get('company_name', '').replace(" ", "").strip().lower()
+        location_db = store.get('location', '').replace(" ", "").strip().lower()
 
-        if store_name_normalized == company_name_db and region_normalized == location_db:
+        if (store_name_normalized in company_name_db or company_name_db in store_name_normalized) and \
+           (region_normalized in location_db or location_db in region_normalized):
             return True
 
     return False

@@ -92,15 +92,26 @@ class AdRewardView(APIView):
 
 class RedeemView(APIView):
     permission_classes = [IsAuthenticated]
+    FIXED_AMOUNTS = [1000, 5000, 10000, 20000, 50000]
 
     def post(self, request):
-        amount = int(request.data.get("amount"))
         try:
+            amount = int(request.data.get("amount"))
+            
+            if amount % 1000 != 0:
+                return Response(
+                    {"error": "1,000원 단위로만 입력 가능합니다."},
+                    status=400
+                )
             redeem = redeem_coin(request.user, amount)
-        except ValueError as e:
-            return Response({"error": str(e)}, status=400)
-        return Response(RedeemCodeSerializer(redeem).data)
 
+        except (TypeError, ValueError):
+            return Response(
+                {"error": "잔액이 부족합니다."},
+                status=400
+            )
+
+        return Response(RedeemCodeSerializer(redeem).data)
 
 class RedeemHistoryView(APIView):
     permission_classes = [IsAuthenticated]
