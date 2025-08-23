@@ -122,11 +122,13 @@ class JobPostSerializer(serializers.ModelSerializer):
             return None
 
     def validate(self, data):
-        # 새로 업로드한 이미지가 없으면 기존 DB 값 확인
-        obj = getattr(self, 'instance', None)
-        if not self.initial_data.get('image_from_gallery') and not self.initial_data.get('image_from_ai'):
-            if not obj or (not obj.image_from_gallery and not obj.image_from_ai):
-                raise serializers.ValidationError("이미지는 갤러리 또는 AI 이미지 중 하나는 필수입니다.")
+        use_ai = self.context['request'].data.get('use_ai', False)
+        gallery_image = self.initial_data.get('image_from_gallery')
+
+        if not gallery_image and not use_ai:
+            raise serializers.ValidationError(
+                "이미지는 갤러리 또는 AI 이미지 중 하나는 필수입니다."
+            )
         return data
 
     def get_is_liked(self, obj):
@@ -173,3 +175,14 @@ class JobPostDetailWithEmployeeReviewsSerializer(serializers.ModelSerializer):
     def get_employee_reviews(self, obj):
         reviews = EmployeeReview.objects.filter(job=obj, completed=True)
         return EmployeeReviewSerializer(reviews, many=True).data
+    
+class SimpleApplicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Application
+        fields = ["motivation", "status", "applied_at"]
+
+class JobPostDetailWithApplicationsSerializer(JobPostSerializer):
+    applications = SimpleApplicationSerializer(many=True, read_only=True)
+
+    class Meta(JobPostSerializer.Meta):
+        fields = JobPostSerializer.Meta.fields + ['applications']
