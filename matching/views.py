@@ -14,7 +14,7 @@ from accounts.models import User, Profile
 from portfolio.models import Portfolio
 from reviews.models import EmployerReview
 from django.db.models import Avg
-from jobs.models import JobPost
+from jobs.models import JobPost, Application
 from .services.ai_recommend import recommend_jobs, recommend_students
 
 # Create your views here.
@@ -45,13 +45,83 @@ class StudentRespondMatchRequestView(APIView):
         # 요청받은 학생만 응답 가능
         if match_request.helper != request.user:
             return Response({"error": "권한이 없습니다."}, status=403)
+        
+        # 이미 매칭된 상태인지 확인
+        if match_request.status == "matching":
+            return Response({"error": "이미 매칭이 완료된 요청입니다."}, status=400)
 
-        status = request.data.get("status")  # 'accepted' or 'rejected'
-        match_request.status = status
+        status_choice = request.data.get("status")
+
+        # accepted인 경우 1:1 매칭 처리
+        if status_choice == "accepted":
+            return self.handle_match_request_acceptance(match_request)
+        else: # rejected인 경우
+            match_request.status = "rejected"
+            match_request.save()
+
+            serializer = MatchRequestSerializer(match_request)
+            return Response(serializer.data)
+    
+    # 요청 수락시 1:1 메칭 처리
+    def handle_match_request_acceptance(self, match_request):
+        student = match_request.helper
+        employer = match_request.employer
+        job_post = match_request.job_post
+
+        # 소상공인이 이미 다른 학생과 매칭되었는지 확인
+        existing_owner_match = MatchRequest.objects.filter(
+            employer=employer,
+            status="matching"
+        ).first()
+
+        if existing_owner_match:
+            return Response({
+                "error": f"소상공인이 이미 다른 학생과 매칭되어 있습니다."
+            }, status=400)
+
+        # 학생이 이미 다른 요청과 매칭되었는지 확인
+        existing_student_match = MatchRequest.objects.filter(
+            helper=student,
+            status="matching"
+        ).first()
+
+        if existing_student_match:
+            return Response({
+                "error": f"이미 다른 요청과 매칭되어 있습니다."
+            }, status=400)
+
+        # 매칭 성공-상태 변경
+        match_request.status = "matching"
         match_request.save()
 
+        # 관련된 Application들 거절 처리
+        Application.objects.filter(
+            job_post=job_post,
+            status="pending"
+        ).update(status="rejected")
+
+        Application.objects.filter(
+            applicant=student,
+            status="pending"
+        ).update(status="rejected")
+
+        # 다른 MatchRequest 거절 처리
+        MatchRequest.objects.filter(
+            employer=employer,
+            status="pending"
+        ).exclude(id=match_request.id).update(status="rejected")
+        
+        # 학생이 받은 다른 요청들 거절
+        MatchRequest.objects.filter(
+            helper=student,
+            status="pending"
+        ).exclude(id=match_request.id).update(status="rejected")
+        
         serializer = MatchRequestSerializer(match_request)
-        return Response(serializer.data)
+        return Response({
+            **serializer.data,
+            "message": "매칭이 완료되었습니다! 다른 지원서와 요청들은 자동으로 거절 처리되었습니다."
+        })
 
 # 추천 공고
 class RecommendJobsView(APIView):

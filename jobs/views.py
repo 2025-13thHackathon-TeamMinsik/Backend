@@ -237,6 +237,24 @@ class AcceptApplicationView(APIView):
         if status_choice not in ["accepted", "rejected"]:
             return Response({"error": "status는 accepted 또는 rejected만 가능합니다."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 이미 매칭된 상태인지 확인
+        if application.status == "matching":
+            return Response({"error": "이미 매칭이 완료된 지원서입니다."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if status_choice == "accepted":
+            return self.handle_matching(application, job_owner)
+        else:
+            application.staus = "rejected"
+            application.save()
+
+            return Response({
+                "id": application.id,
+                "job_post": application.job_post.id,
+                "applicant": application.applicant.id,
+                "status": application.status,
+                "message": f"지원서가 거절되었습니다."
+            }, status-status.HTTP_200_OK)
+
         # 상태 저장
         application.status = status_choice
         application.save()
@@ -247,4 +265,71 @@ class AcceptApplicationView(APIView):
             "application": application.applicant.id,
             "status": application.status,
             "message": f"Application이 {application.status} 처리 되었습니다."
-        }, status=status.HTTP_200_OK) 
+        }, status=status.HTTP_200_OK)
+
+    # 1:1 매칭 처리 로직
+    def handle_matching(self, application, job_owner):
+        student = application.applicant
+        job_post = application.job_post
+
+        # 소상공인(공고)이 이미 다른 학생과 매칭 되었는지 확인
+        existing_owner_match = Application.objects.filter(
+            job_post__owner = job_owner,
+            status="matching"
+        ).first()
+
+        if existing_owner_match:
+            return Response({
+                "error": f"이미 다른 학생({existing_owner_match.applicant.full_name})과 매칭되어 있습니다."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 학생이 이미 다른 공고와 매칭되었는지 확인
+        existing_student_match = Application.objects.filter(
+            applicant=student,
+            status="matching"
+        ).first()
+
+        if existing_student_match:
+            return Response({
+                "error": f"해당 학생이 이미 공고와 매칭되어 있습니다."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # 매칭 성공 - 상태 변경
+        application.status = "matching"
+        application.save()
+
+        # 해당 공고의 다른 지원자들 모두 거절 처리
+        other_applications = Application.objects.filter(
+            job_post=job_post,
+            status="pending"
+        ).exclude(id=application.id)
+
+        other_applications.update(status="rejected")
+
+        # 해당 학생의 다른 지원서들 모두 거절 처리
+        student_other_applications = Application.objects.filter(
+            applicant=student,
+            status="pending"
+        ).exclude(id=application.id)
+
+        student_other_applications.update(status="rejected")
+
+        # 요청들 모두 거절 처리
+        MatchRequest.objects.filter(
+            employer=job_owner,
+            status="pending"
+        ).update(status="rejected")
+        
+        # 학생이 받은 다른 요청들 거절
+        MatchRequest.objects.filter(
+            helper=student,
+            status="pending"
+        ).update(status="rejected")
+        
+        return Response({
+            "id": application.id,
+            "job_post": application.job_post.id,
+            "applicant": application.applicant.id,
+            "status": application.status,
+            "message": f"매칭이 완료되었습니다! 다른 지원서들은 자동으로 거절 처리되었습니다."
+        }, status=status.HTTP_200_OK)
