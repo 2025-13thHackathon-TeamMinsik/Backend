@@ -4,13 +4,19 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from .models import JobPost, Application
-from .serializers import JobPostSerializer,JobPostListSerializer,ApplicationSerializer
+from .serializers import JobPostSerializer,JobPostListSerializer,ApplicationSerializer,MyJobPostListSerializer,JobPostDetailWithEmployeeReviewsSerializer,JobPostDetailWithApplicationsSerializer
 from django.db.models import Q
 from rest_framework.views import APIView
 from django.db.models import Count
 from geopy.distance import geodesic
 from matching.utils import generate_nickname
 from notifications.models import Notification
+from rest_framework.exceptions import ValidationError
+from reviews.models import EmployerReview, EmployeeReview
+from matching.models import MatchRequest
+from reviews.serializers import EmployeeReviewSerializer
+from reviews.models import EmployeeReview
+from .utils import generate_image_from_description, save_image_to_jobpost
 
 class JobPostListView(generics.ListAPIView):
     serializer_class = JobPostListSerializer
@@ -75,24 +81,60 @@ class JobPostCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if JobPost.objects.filter(owner=user).exists():
-            raise PermissionError("이미 공고를 1개 이상 등록하였습니다.")
+        last_job = JobPost.objects.filter(owner=user).order_by('-created_at').first()
+
+        # 이전 공고 매칭/리뷰 확인
+        if last_job:
+            matching_done = MatchRequest.objects.filter(job_post=last_job, status="accepted").exists()
+            if not matching_done:
+                raise ValidationError(
+                    "이전 공고의 매칭이 완료되지 않아 새 공고를 작성할 수 없습니다. 기존 공고는 수정/삭제만 가능합니다."
+                )
+
+            employer_review_done = EmployerReview.objects.filter(job=last_job, completed=True).exists()
+            employee_review_done = EmployeeReview.objects.filter(job=last_job, completed=True).exists()
+            if not (employer_review_done and employee_review_done):
+                raise ValidationError(
+                    "이전 공고의 모든 리뷰가 완료되어야 새 공고를 작성할 수 있습니다."
+                )
 
         # 모바일에서 받은 GPS 좌표
         store_lat = self.request.data.get('store_lat')
         store_lng = self.request.data.get('store_lng')
 
-        # 이미지 파일 가져오기 (form-data에서 업로드된 경우)
+        # 이미지 선택 여부
         image_from_gallery = self.request.FILES.get('image_from_gallery')
-        image_from_ai = self.request.FILES.get('image_from_ai')
+        use_ai = str(self.request.data.get('use_ai')).lower() == 'true'
 
-        serializer.save(
-            owner=user,
-            store_lat=store_lat,
-            store_lng=store_lng,
-            image_from_gallery=image_from_gallery,
-            image_from_ai=image_from_ai
-        )
+        # 유효성 검사
+        if image_from_gallery and use_ai:
+            raise ValidationError("갤러리 이미지와 AI 이미지는 동시에 선택할 수 없습니다.")
+        elif not image_from_gallery and not use_ai:
+            raise ValidationError("이미지는 갤러리 또는 AI 이미지 중 하나를 선택해야 합니다.")
+
+        # 갤러리 이미지 선택
+        if image_from_gallery:
+            jobpost = serializer.save(
+                owner=user,
+                store_lat=store_lat,
+                store_lng=store_lng,
+                image_from_gallery=image_from_gallery
+            )
+        # AI 이미지 선택
+        else:
+            jobpost = serializer.save(
+                owner=user,
+                store_lat=store_lat,
+                store_lng=store_lng
+            )
+            try:
+                ai_image_data = generate_image_from_description(jobpost.description)
+                save_image_to_jobpost(jobpost, ai_image_data)
+            except Exception as e:
+                print("Stable Diffusion 이미지 생성 실패:", e)
+
+        return jobpost
+
 
 # 공고 수정 (본인 공고만)
 class JobPostUpdateView(generics.RetrieveUpdateAPIView):
@@ -265,9 +307,8 @@ class AcceptApplicationView(APIView):
             "application": application.applicant.id,
             "status": application.status,
             "message": f"Application이 {application.status} 처리 되었습니다."
-        }, status=status.HTTP_200_OK)
-
-    # 1:1 매칭 처리 로직
+        }, status=status.HTTP_200_OK) 
+        # 1:1 매칭 처리 로직
     def handle_matching(self, application, job_owner):
         student = application.applicant
         job_post = application.job_post
@@ -333,3 +374,46 @@ class AcceptApplicationView(APIView):
             "status": application.status,
             "message": f"매칭이 완료되었습니다! 다른 지원서들은 자동으로 거절 처리되었습니다."
         }, status=status.HTTP_200_OK)
+    
+ # 내가 쓴 공고 조회 (로그인 필요)
+class MyJobPostListView(generics.ListAPIView):
+    serializer_class = MyJobPostListSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        return JobPost.objects.filter(owner=user).order_by('-created_at')   
+    
+#후기랑 상세 공고 같이 보기
+class JobPostDetailWithEmployeeReviewsView(generics.RetrieveAPIView):
+    queryset = JobPost.objects.all()
+    serializer_class = JobPostSerializer
+
+    def retrieve(self, request, *args, **kwargs):
+        job = self.get_object()
+        job_data = self.get_serializer(job).data
+        reviews = EmployeeReview.objects.filter(job=job, completed=True)
+        reviews_data = EmployeeReviewSerializer(reviews, many=True).data
+        job_data['reviews'] = reviews_data
+        return Response(job_data)
+
+class JobPostDetailWithMyApplicationView(generics.RetrieveAPIView):
+    queryset = JobPost.objects.all()
+    serializer_class = JobPostSerializer
+    permission_classes = [IsAuthenticated]
+
+    def retrieve(self, request, *args, **kwargs):
+        job = self.get_object()
+        job_data = self.get_serializer(job).data
+
+        application = Application.objects.filter(job_post=job, applicant=request.user).first()
+        if application:
+            job_data['my_application'] = {
+                "motivation": application.motivation,
+                "status": application.status,
+                "applied_at": application.applied_at
+            }
+        else:
+            job_data['my_application'] = None
+
+        return Response(job_data)
