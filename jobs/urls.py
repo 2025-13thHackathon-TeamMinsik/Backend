@@ -3,7 +3,7 @@ from .views import (
     JobPostListView, JobPostDetailView,
     JobPostCreateView, JobPostUpdateView,JobPostLikeToggleView, JobPostDeleteView,
     JobPostHistoryView,JobPostSearchListView, ApplicationView, AcceptApplicationView,MyJobPostListView,
-    JobPostDetailWithEmployeeReviewsView
+    JobPostDetailWithEmployeeReviewsView,JobPostDetailWithMyApplicationView
 )
 
 app_name = 'jobs'
@@ -39,5 +39,11 @@ urlpatterns = [
         'posts/<int:pk>/detail_with_employee_reviews/', 
         JobPostDetailWithEmployeeReviewsView.as_view(), 
         name='jobpost_detail_with_employee_reviews'
+    ),
+    #대학생용 상세조회+나눔동기 조회
+    path(
+        "posts/<int:pk>/my_application/",
+        JobPostDetailWithMyApplicationView.as_view(),
+        name="post-detail-my-application"
     ),
 ]
