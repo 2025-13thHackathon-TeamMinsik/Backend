@@ -7,12 +7,13 @@ from django.db.models import Avg
 
 # 재능 지원함
 class JobAndRequestedSerializer(serializers.ModelSerializer):
+    job_id = serializers.IntegerField(source='id', read_only=True)
     # 재능 도우미(공고에 신청한 대학생 리스트)
     applicants = serializers.SerializerMethodField()
     
     class Meta:
         model = JobPost
-        fields = ['id', 'duration_time', 'payment_info', 'payment_type', 'description', 'applicants']
+        fields = ['job_id', 'duration_time', 'payment_info', 'payment_type', 'description', 'applicants']
 
     def get_applicants(self, obj):
         applications = obj.applications.select_related('applicant', 'applicant__profile')
@@ -51,8 +52,6 @@ class JobAndRequestedSerializer(serializers.ModelSerializer):
                 'punctuality_score': round(avg_scores['avg_punctuality'] or 0, 1),
                 'cheerful_attitude_score': round(avg_scores['avg_cheerful_attitude'] or 0, 1),
                 'politeness_score': round(avg_scores['avg_politeness'] or 0, 1),
-                # 지원자 수
-                'review_count': EmployerReview.objects.filter(employee=user).count(),
                 'applied_at': app.applied_at,
             }
             applicants.append(applicant_data)
@@ -61,6 +60,7 @@ class JobAndRequestedSerializer(serializers.ModelSerializer):
 
 # 지원자 상세 보기
 class StudentDetailSerializer(serializers.ModelSerializer):
+    application_id = serializers.IntegerField(source='id', read_only=True)
     # 나눔 동기
     motivation = serializers.CharField(source='job_post.application.motivation', read_only=True)
     # 지원자 정보
@@ -72,7 +72,7 @@ class StudentDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Application
-        fields = ['id', 'motivation', 'applicant_info', 'portfolio', 'activity_history', 'applied_at']
+        fields = ['application_id', 'motivation', 'applicant_info', 'portfolio', 'activity_history', 'applied_at']
 
     def get_applicant_info(self, obj):
         user = obj.applicant

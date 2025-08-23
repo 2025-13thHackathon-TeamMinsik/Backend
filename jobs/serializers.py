@@ -139,9 +139,11 @@ class JobPostSerializer(serializers.ModelSerializer):
 
 # 지원서 신청
 class ApplicationSerializer(serializers.ModelSerializer):
+    application_id = serializers.IntegerField(source='id', read_only=True)
+
     class Meta:
         model = Application
-        fields = ["id", "job_post", "applicant", "motivation", "status", "applied_at"]
+        fields = ["application_id", "job_post", "applicant", "motivation", "status", "applied_at"]
         read_only_fields = ["status", "applied_at"]
 
 # 내가 올린 공고 모아보기

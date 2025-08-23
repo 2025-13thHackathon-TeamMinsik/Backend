@@ -13,7 +13,7 @@ class EmployerReviewCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         job = serializer.validated_data['job']
-        match = MatchRequest.objects.filter(job_post=job, status='accepted').first()
+        match = MatchRequest.objects.filter(job_post=job, status='matching').first()
         if not match:
             raise ValidationError("이 공고에는 아직 매칭 완료된 대학생이 없습니다.")
         serializer.save(author=self.request.user, employee=match.helper)
@@ -32,7 +32,7 @@ class EmployeeReviewCreateView(generics.CreateAPIView):
         if EmployeeReview.objects.filter(author=helper, job=job).exists():
             raise ValidationError("이미 이 공고에 대한 리뷰를 작성하셨습니다.")
 
-        match = MatchRequest.objects.filter(job_post=job, helper=helper, status='accepted').first()
+        match = MatchRequest.objects.filter(job_post=job, helper=helper, status='matching').first()
         if not match:
             raise ValidationError("아직 매칭 완료된 사장이 없습니다.")
 

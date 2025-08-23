@@ -3,7 +3,7 @@ from rest_framework import serializers
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
-from portfolio.models import Portfolio, TalentImage
+from portfolio.models import Portfolio, TalentImage, Activities
 from portfolio.serializers import PortfolioSerializer, TalentImageSerializer, PortfolioBasicUpdateSerializer, PortfolioIntroduceUpdateSerializer, ActivityUpdateSerializer
 
 # Create your views here.

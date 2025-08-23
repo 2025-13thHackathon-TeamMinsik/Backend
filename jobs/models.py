@@ -49,7 +49,7 @@ class JobPost(models.Model):
         return self.image_from_gallery or self.image_from_ai
 
     def __str__(self):
-        return f"{self.owner.store_name} - {self.duration_time} ({self.payment_type})"
+        return f"{self.owner.profile.company_name} - {self.duration_time} ({self.payment_type})"
 
 class Application(models.Model):
     STATUS_CHOICES = [
