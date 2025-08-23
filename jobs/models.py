@@ -75,6 +75,8 @@ class Application(models.Model):
     motivation = models.CharField(max_length=200, blank=True, null=True)
     # 재능 나누기 요청 상태
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    # 닉네임
+    nickname = models.CharField(max_length=50, blank=True)
 
     def __str__(self):
         return f"{self.applicant} -> {self.job_post}"
