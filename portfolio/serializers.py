@@ -5,12 +5,14 @@ from accounts.models import Profile, User
 
 # 재능 관람-이미지
 class TalentImageSerializer(serializers.ModelSerializer):
+    image_id = serializers.IntegerField(source='id', read_only=True) 
     class Meta:
         model = TalentImage
-        fields = ['id', 'image']
+        fields = ['image_id', 'image']
 
 # 활동 이력
 class ActivitiesSerializer(serializers.ModelSerializer):
+    activity_id = serializers.IntegerField(source='id', read_only=True) 
     company_name = serializers.CharField(source='job.owner.profile.company_name', read_only=True)
     duration_time = serializers.CharField(source='job.duration_time', read_only=True)
     skills = serializers.SerializerMethodField()
@@ -18,7 +20,7 @@ class ActivitiesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Activities
         fields = [
-            'id', 'company_name', 'skills', 'duration_time', 'ai_portfolio_summary'
+            'activity_id', 'company_name', 'skills', 'duration_time', 'ai_portfolio_summary'
         ]
 
     def get_skills(self, obj):

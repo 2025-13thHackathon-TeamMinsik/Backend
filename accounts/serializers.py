@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate
 from .models import User, Profile
 
 class UserSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(source='id', read_only=True)
     # Profile 필드 읽기 전용으로 가져오기
     role = serializers.CharField(source='profile.role', read_only=True)
     skill_1 = serializers.CharField(source='profile.skill_1', read_only=True)
@@ -24,7 +25,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id', 'role', "full_name",  'birth', 'gender', 'phone', 'email', 'location',
+            'user_id', 'role', "full_name",  'birth', 'gender', 'phone', 'email', 'location',
             'skill_1', 'skill_2',
             'university', 'major', 'academic_status',
             'ceo_name', 'business_number', 'company_name', 'business_type', 
