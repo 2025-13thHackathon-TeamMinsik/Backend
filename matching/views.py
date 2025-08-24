@@ -47,7 +47,7 @@ class StudentRespondMatchRequestView(APIView):
             return Response({"error": "권한이 없습니다."}, status=403)
         
         # 이미 매칭된 상태인지 확인
-        if match_request.status == "matching":
+        if match_request.status == "matched":
             return Response({"error": "이미 매칭이 완료된 요청입니다."}, status=400)
 
         status_choice = request.data.get("status")
@@ -71,7 +71,7 @@ class StudentRespondMatchRequestView(APIView):
         # 소상공인이 이미 다른 학생과 매칭되었는지 확인
         existing_owner_match = MatchRequest.objects.filter(
             employer=employer,
-            status="matching"
+            status="matched"
         ).first()
 
         if existing_owner_match:
@@ -82,7 +82,7 @@ class StudentRespondMatchRequestView(APIView):
         # 학생이 이미 다른 요청과 매칭되었는지 확인
         existing_student_match = MatchRequest.objects.filter(
             helper=student,
-            status="matching"
+            status="matched"
         ).first()
 
         if existing_student_match:
@@ -91,7 +91,7 @@ class StudentRespondMatchRequestView(APIView):
             }, status=400)
 
         # 매칭 성공-상태 변경
-        match_request.status = "matching"
+        match_request.status = "matched"
         match_request.save()
 
         # 관련된 Application들 거절 처리
@@ -179,9 +179,10 @@ class RecommendJobsView(APIView):
         for job_id in job_ids:
             print(f"\n=== job_id {job_id} 처리 중 ===")
             try:
-                owner_user = User.objects.get(id=int(job_id))
-                owner_profile = Profile.objects.get(user=owner_user, role='owner')
-                print(f"✅ Owner Profile 찾음: {owner_user}")
+                job_post = JobPost.objects.get(id=int(job_id))
+                owner_profile = job_post.owner.profile
+                print(f"✅ Job Post 찾음: {job_post.owner.profile.company_name}")
+                # print(f"✅ Owner Profile 찾음: {owner_user}")
                 
                 # 테스트용: DB 저장 로직 주석처리
                 # RecommendedJobPost.objects.create(student=user, job_post=job_post)
@@ -317,7 +318,6 @@ class RecommendStudentsView(APIView):
                     "id": student.id,
                     "name": student.full_name,
                     "profile_image": profile_image,
-                    "participation": employer_review.participation if employer_review else 0,
                     "diligence": employer_review.diligence if employer_review else 0,
                     "punctuality": employer_review.punctuality if employer_review else 0,
                     "cheerful_attitude": employer_review.cheerful_attitude if employer_review else 0,
