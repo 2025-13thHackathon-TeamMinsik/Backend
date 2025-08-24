@@ -280,7 +280,7 @@ class AcceptApplicationView(APIView):
             return Response({"error": "status는 accepted 또는 rejected만 가능합니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         # 이미 매칭된 상태인지 확인
-        if application.status == "matching":
+        if application.status == "matched":
             return Response({"error": "이미 매칭이 완료된 지원서입니다."}, status=status.HTTP_400_BAD_REQUEST)
         
         if status_choice == "accepted":
@@ -316,7 +316,7 @@ class AcceptApplicationView(APIView):
         # 소상공인(공고)이 이미 다른 학생과 매칭 되었는지 확인
         existing_owner_match = Application.objects.filter(
             job_post__owner = job_owner,
-            status="matching"
+            status="matched"
         ).first()
 
         if existing_owner_match:
@@ -327,7 +327,7 @@ class AcceptApplicationView(APIView):
         # 학생이 이미 다른 공고와 매칭되었는지 확인
         existing_student_match = Application.objects.filter(
             applicant=student,
-            status="matching"
+            status="matched"
         ).first()
 
         if existing_student_match:
@@ -336,7 +336,7 @@ class AcceptApplicationView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         # 매칭 성공 - 상태 변경
-        application.status = "matching"
+        application.status = "matched"
         application.save()
 
         # 해당 공고의 다른 지원자들 모두 거절 처리
