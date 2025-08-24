@@ -10,7 +10,7 @@ class NotificationSerializer(serializers.ModelSerializer):
         model = Notification
         fields = ['notification_id', 'recipient', 'message', 'is_read', 'time_ago', 'created_at']
 
-    def get_time_age(self, obj):
+    def get_time_ago(self, obj):
         now = timezone.now()
         diff = now - obj.created_at
         seconds = diff.total_seconds()
