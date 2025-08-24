@@ -85,7 +85,7 @@ class JobPostCreateView(generics.CreateAPIView):
 
         # 이전 공고 매칭/리뷰 확인
         if last_job:
-            matching_done = MatchRequest.objects.filter(job_post=last_job, status="accepted").exists()
+            matching_done = MatchRequest.objects.filter(job_post=last_job, status="matched").exists()
             if not matching_done:
                 raise ValidationError(
                     "이전 공고의 매칭이 완료되지 않아 새 공고를 작성할 수 없습니다. 기존 공고는 수정/삭제만 가능합니다."

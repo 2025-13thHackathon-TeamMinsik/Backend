@@ -3,7 +3,7 @@ from django.dispatch import receiver
 from .models import MatchRequest
 from jobs.models import JobPost, Application
 from notifications.models import Notification
-from reviews.models import EmployerReview
+from reviews.models import EmployerReview, EmployeeReview
 from django.contrib.auth import get_user_model
 from .utils import generate_nickname
 
@@ -64,7 +64,7 @@ def match_request_status_changed(sender, instance, **kwargs):
         except Application.DoesNotExist:
             nickname="익명의 도우미"
 
-        if instance.status == "accepted": # 수락 시
+        if instance.status == "matched": # 수락 시
             Notification.objects.create(
                 recipient=employer,
                 message=f"{helper.profile.company_name}와 매칭되었어요.\n 도우미와 연락 후 나눔 진행하세요!\n\n ({helper.phone})"
@@ -82,7 +82,7 @@ def application_status_changed(sender, instance, **kwargs):
         student = instance.applicant #지원한 학생
         employer = instance.job_post.owner
         job_post = instance.job_post
-        if instance.status == "accepted": # 수락 시
+        if instance.status == "matched": # 수락 시
             Notification.objects.create(
                 recipient=student,
                 message=f"{employer.profile.company_name}에서 재능을 수락했어요. 의뢰인과 연락하고 나눔을 진행하세요! ({employer.phone})"
@@ -113,3 +113,41 @@ def notifiy_review(sender, instance, created,**kwargs):
                 recipient=student,
                 message=message
             )
+
+# 학생 후기 작성 완료 -> 모두 작업 완료 처리
+@receiver(post_save, sender=EmployeeReview)
+def complete_application(sender, instance, created, **kwargs):
+    if created:
+        try:
+            # 해당 학생과 공고에 대한 Application 찾기
+            application = Application.objects.filter(
+                applicant=instance.author,  # 학생 (후기 작성자)
+                job_post=instance.job,      # 공고
+                status='matched'            # 매칭 완료 상태만
+            ).first()
+
+            # 2. MatchRequest 찾기 (소상공인이 요청한 경우)
+            match_request = MatchRequest.objects.filter(
+                helper=instance.author,     # 학생 (후기 작성자)
+                job_post=instance.job,      # 공고
+                status='matched'            # 매칭 완료 상태만
+            ).first()
+            
+            if application:
+                # 작업 완료로 상태 변경
+                application.status = 'completed'
+                application.save()
+                
+                print(f"✅ Application {application.id} 상태가 completed로 변경됨")
+
+            # MatchRequest 완료 처리
+            if match_request:
+                match_request.status = 'completed'
+                match_request.save()
+                print(f"✅ MatchRequest {match_request.id} 상태가 completed로 변경됨")
+                
+            else:
+                print(f"❌ 해당하는 매칭된 Application을 찾을 수 없음 (학생: {instance.author}, 공고: {instance.job})")
+                
+        except Exception as e:
+            print(f"❌ 학생 후기 완료 처리 실패: {e}")
