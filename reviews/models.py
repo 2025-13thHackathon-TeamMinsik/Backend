@@ -20,7 +20,6 @@ class EmployerReview(models.Model):
         on_delete=models.CASCADE,
         related_name='employer_reviews',
     )
-    participation = models.PositiveSmallIntegerField()
     diligence = models.PositiveSmallIntegerField()
     punctuality = models.PositiveSmallIntegerField()
     cheerful_attitude = models.PositiveSmallIntegerField()
