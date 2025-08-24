@@ -59,7 +59,6 @@ def students_DB_to_json(students_queryset):
         # 학생 평점 계산
         reviews = EmployerReview.objects.filter(employee=s.user)
         avg_scores = reviews.aggregate(
-            avg_participation=Avg('participation'),
             avg_diligence=Avg('diligence'),
             avg_punctuality=Avg('punctuality'),
             avg_cheerful_attitude=Avg('cheerful_attitude'),

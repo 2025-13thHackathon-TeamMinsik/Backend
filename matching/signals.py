@@ -3,6 +3,7 @@ from django.dispatch import receiver
 from .models import MatchRequest
 from jobs.models import JobPost, Application
 from notifications.models import Notification
+from reviews.models import EmployerReview
 from django.contrib.auth import get_user_model
 from .utils import generate_nickname
 
@@ -90,4 +91,25 @@ def application_status_changed(sender, instance, **kwargs):
             Notification.objects.create(
                 recipient=student,
                 message=f"{employer.profile.company_name}과/와 아쉽게도 매칭되지 않았어요."
+            )
+
+# 소상공인이 후기 작성->학생에게 후기 작성하라는 알림
+@receiver(post_save, sender=EmployerReview)
+def notifiy_review(sender, instance, created,**kwargs):
+    if created:
+        student = instance.employee
+        company_name = instance.author.profile.company_name
+        
+        # 이미 같은 내용의 알림이 있는지 확인
+        message = f"{company_name} 작업을 마치셨나요? 후기를 작성해보세요."
+        
+        # 중복 알림 방지
+        if not Notification.objects.filter(
+            recipient=student,
+            message=message,
+            is_read=False
+        ).exists():
+            Notification.objects.create(
+                recipient=student,
+                message=message
             )
