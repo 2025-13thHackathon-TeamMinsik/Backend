@@ -16,7 +16,7 @@ from reviews.models import EmployerReview, EmployeeReview
 from matching.models import MatchRequest
 from reviews.serializers import EmployeeReviewSerializer
 from reviews.models import EmployeeReview
-from .utils import generate_image_from_description, save_image_to_jobpost
+# from .utils import generate_image_from_description, save_image_to_jobpost
 
 class JobPostListView(generics.ListAPIView):
     serializer_class = JobPostListSerializer
@@ -127,11 +127,11 @@ class JobPostCreateView(generics.CreateAPIView):
                 store_lat=store_lat,
                 store_lng=store_lng
             )
-            try:
-                ai_image_data = generate_image_from_description(jobpost.description)
-                save_image_to_jobpost(jobpost, ai_image_data)
-            except Exception as e:
-                print("Stable Diffusion 이미지 생성 실패:", e)
+            # try:
+            #     ai_image_data = generate_image_from_description(jobpost.description)
+            #     save_image_to_jobpost(jobpost, ai_image_data)
+            # except Exception as e:
+            #     print("Stable Diffusion 이미지 생성 실패:", e)
 
         return jobpost
 

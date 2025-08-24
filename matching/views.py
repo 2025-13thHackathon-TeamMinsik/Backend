@@ -179,9 +179,10 @@ class RecommendJobsView(APIView):
         for job_id in job_ids:
             print(f"\n=== job_id {job_id} 처리 중 ===")
             try:
-                owner_user = User.objects.get(id=int(job_id))
-                owner_profile = Profile.objects.get(user=owner_user, role='owner')
-                print(f"✅ Owner Profile 찾음: {owner_user}")
+                job_post = JobPost.objects.get(id=int(job_id))
+                owner_profile = job_post.owner.profile
+                print(f"✅ Job Post 찾음: {job_post.owner.profile.company_name}")
+                # print(f"✅ Owner Profile 찾음: {owner_user}")
                 
                 # 테스트용: DB 저장 로직 주석처리
                 # RecommendedJobPost.objects.create(student=user, job_post=job_post)
