@@ -22,9 +22,11 @@ class JobAndApplicantsListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        job_id = self.kwargs['job_id']
         # 로그인한 소상공인의 공고만 조회
         return JobPost.objects.filter(
-            owner = self.request.user
+            owner = self.request.user,
+            id=job_id
         ).prefetch_related(
             Prefetch(
                 'applications',
