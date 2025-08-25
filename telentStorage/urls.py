@@ -21,9 +21,9 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import (TokenObtainPairView,TokenRefreshView,)
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin1234/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
-    path('jobs/', include('jobs.urls', namespace='jobs')),  
+    path('jobs/', include('jobs.urls', namespace='jobs')),
     path("wallets/", include("wallet.urls")),
     path("portfolio/", include("portfolio.urls")),
     path("reviews/", include("reviews.urls")),
@@ -34,3 +34,9 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# 404 에러 핸들러는 하나만 필요합니다
+# page_not_found 함수가 실제로 어느 앱에 정의되어 있는지 확인 후 사용하세요
+# 예시: accounts 앱에 정의되어 있다고 가정
+from accounts.views import page_not_found
+handler404 = page_not_found 

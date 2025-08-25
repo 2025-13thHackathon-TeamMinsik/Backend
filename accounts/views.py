@@ -12,6 +12,8 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
 # Create your views here.
+def page_not_found(request, exception):
+    return render(request, "404.html", status=404)
 
 # 회원가입
 class SignupView(CreateAPIView):
