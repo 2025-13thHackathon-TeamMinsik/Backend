@@ -27,7 +27,9 @@ db.sqlite3
 *.log
 
 # 환경 변수 파일 (예: 비밀번호 들어있는 .env)
-#.env
+.env
 
 #media 폴더(예: 프로필 사진)
 media/
+
+secrets.json

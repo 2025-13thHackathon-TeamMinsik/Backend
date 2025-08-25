@@ -44,8 +44,3 @@ typing-inspection==0.4.1
 typing_extensions==4.14.0
 tzdata==2025.2
 urllib3==2.5.0
-
-# 가상환경 안에서 밑에꺼 꼭 설치하기(AI이미지 생성)
-#pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-#pip install diffusers transformers accelerate safetensors pillow
-#pip install huggingface_hub[hf_xet]
